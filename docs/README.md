@@ -316,6 +316,7 @@ type NodeService interface {
 ```
 
 **Service Layer Benefits:**
+
 - Reusability across different controllers
 - Easier unit testing (mock dependencies)
 - Clear separation of concerns
@@ -497,7 +498,6 @@ frontend/
     ├── screenshots/                  # App screenshots & mocks
     └── Logo/                         # Brand assets
 ```
-
 
 ### 4.2 State Management (Pinia Stores)
 
@@ -741,10 +741,10 @@ colorMode.preference = 'dark'
 // CSS variables per theme
 :root {
   // Default variables correspond to the default primary color
-	--default: #3956e7;
-	--default-dark: #2c3eb9;
-	--default-bg: #dde1f8;
-	--default-border: #dde1f8;
+ --default: #3956e7;
+ --default-dark: #2c3eb9;
+ --default-bg: #dde1f8;
+ --default-border: #dde1f8;
 
   --bg-color: #ffffff;
   --bg-contrast: #fbfbfb;
@@ -780,6 +780,7 @@ type User struct {
 ```
 
 **Database Schema:**
+
 ```sql
 CREATE TABLE `users` (
   `id` varchar(50) NOT NULL PRIMARY KEY,
@@ -838,12 +839,14 @@ type Node struct {
 ```
 
 **Node Roles:**
+
 - `1` - Workspace: Top-level container
 - `2` - Category: Organizational folder
 - `3` - Document: Actual note/content
 - `4` - Ressource: An uploaded file
 
 **Accessibility Levels:**
+
 - `0` - Public: Anyone can view
 - `1` - Private: Only owner and permitted users
 - `2` - Unlisted: Accessible via direct link
@@ -863,6 +866,7 @@ type Permission struct {
 ```
 
 **Permission Levels:**
+
 ```go
 const (
     PermNone  = 0  // No access
@@ -874,6 +878,7 @@ const (
 ```
 
 **Permission Actions:**
+
 ```go
 const (
     ActionRead              = 1  // Requires: PermRead
@@ -1522,6 +1527,7 @@ func SendPasswordResetEmail(email, resetToken string) error {
 ```
 
 **Email Use Cases:**
+
 - Password reset requests
 - Collaboration invites (future)
 
@@ -1574,6 +1580,7 @@ func GetLocationFromIP(ipAddress string) string {
 ```
 
 **Usage:**
+
 - Log user login locations
 - Security monitoring
 - Suspicious activity detection (not implemented yet)
@@ -1601,6 +1608,7 @@ func CheckPassword(password, hash string) bool {
 ```
 
 **Security Features:**
+
 - Bcrypt with cost factor 12 (secure against brute force)
 - Salted hashing (built into bcrypt)
 - Passwords never stored in plain text
@@ -1640,6 +1648,7 @@ func ValidateToken(tokenString string) (*jwt.Token, error) {
 ```
 
 **Token Expiration:**
+
 - Access Token: 15 minutes (short-lived)
 - Refresh Token: 7 days (stored in database)
 
@@ -1760,6 +1769,7 @@ func CreateNode(c *gin.Context) {
 ```
 
 **Validation Rules:**
+
 - Required fields checked
 - String length limits enforced
 - Email format validation
@@ -1815,6 +1825,7 @@ node.Content = SanitizeHTML(userInput)
 ```
 
 **Frontend XSS Protection:**
+
 ```vue
 <!-- Vue automatically escapes content -->
 <div>{{ userContent }}</div>  <!-- Safe: content escaped -->
@@ -1841,6 +1852,7 @@ router.Use(cors.New(cors.Config{
 ```
 
 **Production CORS:**
+
 - Only allow specific frontend domain
 - No wildcards in production
 - Credentials enabled for cookies
@@ -1910,6 +1922,7 @@ func HTTPSRedirect() gin.HandlerFunc {
 ```
 
 **Production Security Checklist:**
+
 - ✅ HTTPS enforced (TLS 1.2+)
 - ✅ HSTS header enabled
 - ✅ Secure cookie flags (httpOnly, secure, sameSite)
@@ -1928,6 +1941,7 @@ func HTTPSRedirect() gin.HandlerFunc {
 ### 9.1 Prerequisites
 
 **Required Software:**
+
 - [Bun](https://bun.sh/) v1.0+ - Fast JavaScript runtime & package manager
 - [Go](https://go.dev/) v1.24+ - Backend language
 - [MySQL](https://www.mysql.com/) 8.0+ - Database server
@@ -2144,9 +2158,9 @@ migrate -database "..." -path migrations goto 10
 # Check current version
 migrate -database "..." -path migrations version
 ```
+
 > [!WARNING]
 > Migrations down are not fully implemented yet
-
 
 ### 9.5 Code Quality
 
@@ -2194,6 +2208,7 @@ git pull origin main
 ```
 
 **Commit Message Convention:**
+
 ```
 feat: Add new feature
 fix: Fix bug in authentication
@@ -2303,7 +2318,6 @@ For details please see [setup guide.md](./setup.md)
 
 ### 10.2 Performance Tuning
 
-
 #### Caching Strategy
 
 ```go
@@ -2334,7 +2348,7 @@ func GetNodeWithCache(nodeId Snowflake) (*Node, error) {
 ### A. Glossary
 
 - **Node**: Unified entity representing workspace, category, document or ressource
-- **Snowflake**: Distributed unique ID generation algorithm (inspired from https://discord.com/developers/docs/reference#snowflakes)
+- **Snowflake**: Distributed unique ID generation algorithm (inspired from <https://discord.com/developers/docs/reference#snowflakes>)
 - **Permission Level**: Numeric access level (0-4) determining user capabilities
 - **S3**: Simple Storage Service, object storage protocol
 - **JWT**: JSON Web Token, stateless authentication mechanism
@@ -2381,14 +2395,14 @@ cat .env
 
 ### C. External Resources
 
-- **Go Documentation**: https://go.dev/doc/
-- **Gin Framework**: https://gin-gonic.com/docs/
-- **Nuxt Documentation**: https://nuxt.com/docs
-- **Vue.js Guide**: https://vuejs.org/guide/
-- **MySQL Reference**: https://dev.mysql.com/doc/
-- **MinIO Documentation**: https://min.io/docs/
-- **JWT.io**: https://jwt.io/
-- **CodeMirror**: https://codemirror.net/
+- **Go Documentation**: <https://go.dev/doc/>
+- **Gin Framework**: <https://gin-gonic.com/docs/>
+- **Nuxt Documentation**: <https://nuxt.com/docs>
+- **Vue.js Guide**: <https://vuejs.org/guide/>
+- **MySQL Reference**: <https://dev.mysql.com/doc/>
+- **MinIO Documentation**: <https://min.io/docs/>
+- **JWT.io**: <https://jwt.io/>
+- **CodeMirror**: <https://codemirror.net/>
 
 ### D. Contributing
 

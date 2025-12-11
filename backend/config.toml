@@ -55,4 +55,3 @@ SupportedTypes = [
 [Auth]
 AccessTokenExpiry = 1800 		# 30 minutes
 RefreshTokenExpiry = 604800 # 7 days
-

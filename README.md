@@ -1,20 +1,22 @@
 # Alexandrie – The Ultimate Note-Taking App
 
-<img src="./frontend/public/Logo/Alexandrie-logo-dark.png" width="120" align="left">
+<!-- markdownlint-disable MD033 -->
+<img src="./frontend/public/Logo/Alexandrie-logo-dark.png" width="120" align="left" alt="Alexandrie Logo" />
+<!-- markdownlint-enable MD033 -->
 
-<b>A modern and elegant application for taking notes in extended Markdown.</b><br>
+**A modern and elegant application for taking notes in extended Markdown.**
+
 Organize, search, and export your notes with an intuitive interface designed for students and productivity.
 
+<!-- markdownlint-disable MD033 -->
 <p align="center">
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/Smaug6739/Alexandrie)](https://github.com/Smaug6739/Alexandrie/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/Smaug6739/Alexandrie)](https://github.com/Smaug6739/Alexandrie/issues)
-[![GitHub license](https://img.shields.io/github/license/Smaug6739/Alexandrie)](https://github.com/Smaug6739/Alexandrie/blob/main/LICENSE)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/Smaug6739/Alexandrie)](https://github.com/Smaug6739/Alexandrie/pulls)
-[![GitHub release](https://img.shields.io/github/v/release/Smaug6739/Alexandrie)](https://github.com/Smaug6739/Alexandrie/releases)
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?&logo=discord&logoColor=white)](<[https://github.com/Smaug6739/Alexandrie/pulls](https://discord.gg/UPsEg6egPj)>)
-
+[![GitHub Repo stars](https://img.shields.io/github/stars/cip8/cc-markdown)](https://github.com/cip8/cc-markdown/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/cip8/cc-markdown)](https://github.com/cip8/cc-markdown/issues)
+[![GitHub license](https://img.shields.io/github/license/cip8/cc-markdown)](https://github.com/cip8/cc-markdown/blob/main/LICENSE)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/cip8/cc-markdown)](https://github.com/cip8/cc-markdown/pulls)
+[![GitHub release](https://img.shields.io/github/v/release/cip8/cc-markdown)](https://github.com/cip8/cc-markdown/releases)
 </p>
+<!-- markdownlint-enable MD033 -->
 
 ![alexandrie-hub fr_dashboard_docs_218914302160015361](.github/present.png)
 
@@ -33,7 +35,7 @@ Organize, search, and export your notes with an intuitive interface designed for
 
 ![Interface 2](./frontend/public/screenshots/mock/2.png)
 
-### Share your notes, collaborate with others, manage permissions.
+### Share your notes, collaborate with others, manage permissions
 
 ![Interface 3](./frontend/public/screenshots/mock/3.png)
 
@@ -57,9 +59,9 @@ For complete setup instructions, please refer to the [Setup Documentation](./doc
 
 **Access points:**
 
-- **Frontend**: http://localhost:8200
-- **Backend API**: http://localhost:8201
-- **Object Storage Console**: http://localhost:9001
+- **Frontend**: <http://localhost:8200>
+- **Backend API**: <http://localhost:8201>
+- **Object Storage Console**: <http://localhost:9001>
 - **MySQL**: localhost:3307 (user: `alexandrie`, password: `password`)
 
 **To stop:**

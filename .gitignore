@@ -1,4 +1,8 @@
-#Public dir
+# Environment Variables
+.env*
+!.env.supabase
+
+# Public dir
 minio
 uploads
 minio.exe

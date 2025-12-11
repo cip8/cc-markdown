@@ -33,9 +33,9 @@ docker compose up
 
 Once the containers are running:
 
-- Frontend → http://localhost:8200
-- Backend API → http://localhost:8201
-- Object Storage (RustFS) → http://localhost:9000
+- Frontend → <http://localhost:8200>
+- Backend API → <http://localhost:8201>
+- Object Storage (RustFS) → <http://localhost:9000>
 
 _Default credentials and basic settings are automatically applied._
 

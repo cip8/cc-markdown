@@ -1,0 +1,9 @@
+services:
+  mysql:
+    volumes:
+      - ./.data/mysql:/var/lib/mysql
+
+  rustfs:
+    volumes:
+      - ./.data/rustfs/data:/data
+      - ./.data/rustfs/logs:/logs
