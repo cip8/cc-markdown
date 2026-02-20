@@ -43,7 +43,10 @@ Organize, search, and export your notes with an intuitive interface designed for
 
 For local testing and development, you can use Docker to run the entire stack:
 
-**Start a demo server (local production, just need to copy the docker-compose file):**
+**Start a demo server:**
+
+- Download the [docker-compose.yml](./docker-compose.yml) file.
+- Download the [.env.example](./.env.example) file and rename it to `.env`, then adjust any environment variables as needed. _Default settings should work out of the box._
 
 ```bash
 docker compose up
@@ -55,7 +58,7 @@ docker compose up
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-For complete setup instructions, please refer to the [Setup Documentation](./docs/setup.md).
+For complete setup instructions, please refer to the [Setup Documentation](./docs/README.md).
 
 **Access points:**
 

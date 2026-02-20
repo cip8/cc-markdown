@@ -1,77 +1,155 @@
 <template>
-  <div :class="['component', isModal ? 'modal' : '']">
-    <nav>
-      <span v-if="isModal">Account settings</span>
+  <div :class="['component', isModal ? 'modal' : '']" @keydown.stop>
+    <button class="menu-toggle" @click="menuOpen = !menuOpen">
+      <Icon :name="menuOpen ? 'close' : 'menu'" />
+      {{ menuOpen ? t('settings.menu.toggleClose') : t('settings.menu.toggleOpen') }}
+    </button>
+    <nav :class="{ open: menuOpen }">
+      <span v-if="isModal">{{ t('settings.meta.accountSettings') }}</span>
       <div v-if="isModal && store.user" class="user">
-        <img :src="useAvatar(store.user)" alt="Avatar" style="width: 25px; height: 25px; border-radius: 50%" />
+        <img :src="avatarURL(store.user)" alt="Avatar" style="width: 25px; height: 25px; border-radius: 50%" />
         <div>
           <div class="username">{{ store.user.username }}</div>
           <div class="email">{{ store.user.email }}</div>
         </div>
       </div>
-      <span>General</span>
-      <NuxtLink @click="setPage('profile')"><Icon name="profil" />My profile</NuxtLink>
-      <NuxtLink @click="setPage('preferences')"><Icon name="settings" />Preferences</NuxtLink>
-      <NuxtLink @click="setPage('security')"><Icon name="security" />Security</NuxtLink>
-      <NuxtLink @click="setPage('backup')"><Icon name="backup" />Backup</NuxtLink>
-      <span>Workspaces</span>
-      <NuxtLink to="/dashboard/categories" @click="close"><Icon name="categories" />Manage categories</NuxtLink>
-      <NuxtLink to="/dashboard/docs" @click="close"><Icon name="draft" />Manage documents</NuxtLink>
-      <NuxtLink to="/dashboard/import" style="display: flex; align-items: center" @click="close"><Icon name="import" />Manage importations</NuxtLink>
-      <span>Utils <tag blue>New</tag></span>
-      <NuxtLink @click="setPage('shortcuts')"><Icon name="shortcuts" />Shortcuts</NuxtLink>
-      <NuxtLink @click="setPage('snippets')"><Icon name="snippets" />Snippets</NuxtLink>
-      <NuxtLink @click="setPage('markdown')"><Icon name="markdown" />Markdown</NuxtLink>
-      <NuxtLink @click="setPage('advanced')"><Icon name="advanced" />Advanced</NuxtLink>
-
-      <span>Other</span>
-      <NuxtLink @click="setPage('about')"><Icon name="view" />About</NuxtLink>
-      <NuxtLink @click="logout"><Icon name="logout" />Logout</NuxtLink>
+      <template v-for="section in navSections" :key="section.title">
+        <span
+          >{{ section.title }} <tag v-if="section.tag" blue>{{ section.tag }}</tag></span
+        >
+        <template v-for="item in section.items" :key="item.label">
+          <NuxtLink v-if="item.type === 'link'" :to="item.to" @click="close"> <Icon :name="item.icon" />{{ item.label }} </NuxtLink>
+          <NuxtLink v-else-if="item.type === 'action'" @click="item.action?.()"> <Icon :name="item.icon" />{{ item.label }} </NuxtLink>
+          <NuxtLink v-else :class="{ active: currentPage === item.key }" @click="setPage(item.key!)"> <Icon :name="item.icon" />{{ item.label }} </NuxtLink>
+        </template>
+      </template>
     </nav>
     <div class="content">
-      <ProfileView v-if="currentPage === 'profile'" />
-      <PreferencesView v-else-if="currentPage === 'preferences'" />
-      <SecurityView v-else-if="currentPage === 'security'" @close="close" />
-      <BackupView v-else-if="currentPage == 'backup'" />
-      <ShortcutsView v-else-if="currentPage == 'shortcuts'" />
-      <SnippetsView v-else-if="currentPage == 'snippets'" />
-      <MarkdownView v-else-if="currentPage == 'markdown'" />
-      <AboutView v-else-if="currentPage == 'about'" />
-      <AdvancedView v-else-if="currentPage == 'advanced'" />
+      <component :is="currentComponent" @close="close" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import ProfileView from './_views/profile.vue';
+import ApparenceView from './_views/apparence.vue';
+import DocumentsView from './_views/documents.vue';
+import EditorView from './_views/editor.vue';
 import SecurityView from './_views/security.vue';
-import PreferencesView from './_views/preferences.vue';
 import BackupView from './_views/backups.vue';
 import ShortcutsView from './_views/shortcuts.vue';
 import SnippetsView from './_views/snippets.vue';
 import MarkdownView from './_views/markdown.vue';
 import AboutView from './_views/about.vue';
 import AdvancedView from './_views/advanced.vue';
+import OtherView from './_views/other.vue';
+import StylesView from './_views/styles.vue';
+
+type PageKey = keyof typeof pages;
+
+interface NavItem {
+  type?: 'page' | 'link' | 'action';
+  key?: PageKey;
+  label: string;
+  icon: string;
+  to?: string;
+  action?: () => void;
+}
+
+interface NavSection {
+  title: string;
+  tag?: string;
+  items: NavItem[];
+}
+
+const pages = {
+  profile: ProfileView,
+  apparence: ApparenceView,
+  documents: DocumentsView,
+  editor: EditorView,
+  security: SecurityView,
+  backup: BackupView,
+  shortcuts: ShortcutsView,
+  snippets: SnippetsView,
+  markdown: MarkdownView,
+  about: AboutView,
+  advanced: AdvancedView,
+  other: OtherView,
+  styles: StylesView,
+} as const;
+
+defineProps<{ isModal?: boolean }>();
+const emit = defineEmits<{ (e: 'close'): void }>();
 
 const route = useRoute();
 const router = useRouter();
 const store = useUserStore();
-defineProps<{ isModal?: boolean }>();
-const emit = defineEmits<{ (e: 'close'): void }>();
-const currentPage = ref(route.query.p || 'profile');
+const { avatarURL } = useApi();
+const { t } = useI18nT();
 
-const setPage = (p: string) => {
-  router.push({ query: { ...route.query, p: '' } });
-  currentPage.value = p;
-};
-watchEffect(() => {
-  if (route.query.p && typeof route.query.p === 'string') currentPage.value = route.query.p;
-});
+const currentPage = ref<PageKey>((route.query.p as PageKey) || 'profile');
+const currentComponent = computed(() => pages[currentPage.value]);
+const menuOpen = ref(false);
+
+const close = () => emit('close');
 const logout = () => {
   logoutUser();
-  emit('close');
+  close();
 };
-const close = () => emit('close');
+
+const navSections = computed<NavSection[]>(() => [
+  {
+    title: t('settings.nav.general'),
+    items: [
+      { key: 'profile', label: t('settings.pages.profile'), icon: 'profil' },
+      { key: 'apparence', label: t('settings.pages.appearance'), icon: 'brush', bubble: true },
+      { key: 'security', label: t('settings.pages.security'), icon: 'security' },
+    ],
+  },
+  {
+    title: t('settings.nav.preferences'),
+    tag: t('settings.nav.new'),
+    items: [
+      { key: 'documents', label: t('settings.pages.documents'), icon: 'bookmark-stack' },
+      { key: 'editor', label: t('settings.pages.editor'), icon: 'editor' },
+      { key: 'styles', label: t('settings.pages.styles'), icon: 'styles' },
+      { key: 'other', label: t('settings.pages.other'), icon: 'advanced' },
+    ],
+  },
+  {
+    title: t('settings.nav.tools'),
+    items: [
+      { key: 'snippets', label: t('settings.pages.snippets'), icon: 'snippets' },
+      { key: 'backup', label: t('settings.pages.backup'), icon: 'backup' },
+      { key: 'advanced', label: t('settings.pages.advanced'), icon: 'build' },
+    ],
+  },
+  {
+    title: t('settings.nav.guides'),
+    items: [
+      { key: 'shortcuts', label: t('settings.pages.shortcuts'), icon: 'shortcuts' },
+      { key: 'markdown', label: t('settings.pages.markdown'), icon: 'markdown' },
+    ],
+  },
+  {
+    title: t('settings.nav.other'),
+    items: [
+      { key: 'about', label: t('settings.pages.about'), icon: 'view' },
+      { type: 'action', label: t('settings.pages.logout'), icon: 'logout', action: () => logout() },
+    ],
+  },
+]);
+
+const setPage = (p: PageKey) => {
+  router.push({ query: { ...route.query, p } });
+  currentPage.value = p;
+  menuOpen.value = false;
+};
+
+watchEffect(() => {
+  const p = route.query.p;
+  if (p && typeof p === 'string' && p in pages) currentPage.value = p as PageKey;
+});
 </script>
 
 <style scoped lang="scss">
@@ -79,31 +157,34 @@ const close = () => emit('close');
   display: flex;
   width: 100%;
   height: 100%;
-  background-color: var(--bg-color);
+  background-color: var(--surface-base);
+
   nav {
+    width: 300px;
     padding: 1rem;
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid var(--border);
     gap: 1rem;
     overflow-y: auto;
-    width: 270px;
+
     span {
       font-size: 0.9rem;
       font-weight: 500;
-      color: var(--font-color-light);
+      color: var(--text-secondary);
     }
 
     a {
       display: flex;
       margin: 0.4rem 0.2rem;
       padding: 0.05rem 0.4rem;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       color: inherit;
       align-items: center;
       gap: 0.5rem;
       text-decoration: none;
 
-      &:hover {
-        background-color: var(--bg-contrast-2);
+      &:hover,
+      &.active {
+        background-color: var(--surface-overlay);
       }
     }
 
@@ -117,7 +198,7 @@ const close = () => emit('close');
 
         .email {
           font-size: 0.7rem;
-          color: var(--font-color-light);
+          color: var(--text-secondary);
         }
       }
     }
@@ -132,10 +213,15 @@ const close = () => emit('close');
   overflow-y: auto;
 }
 
+.menu-toggle {
+  display: none;
+}
+
 .modal {
   nav {
+    width: 270px;
     border: none;
-    background-color: var(--bg-contrast);
+    background-color: var(--surface-raised);
   }
 
   .content {
@@ -146,11 +232,55 @@ const close = () => emit('close');
 
 @media screen and (width <= 920px) {
   .component {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    box-shadow: none;
+    position: relative;
+    flex-direction: column;
+
+    .menu-toggle {
+      display: flex;
+      padding: 0.75rem 1rem;
+      border: none;
+      font-size: 0.9rem;
+      color: inherit;
+      background-color: var(--surface-raised);
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      gap: 0.5rem;
+    }
+
+    nav {
+      position: absolute;
+      top: 45px;
+      left: 0;
+      z-index: 10;
+      width: 100%;
+      max-height: 0;
+      padding: 0;
+      background-color: var(--surface-base);
+      transition:
+        max-height $transition-base ease,
+        padding $transition-base ease;
+      border-right: none;
+      overflow: hidden;
+
+      &.open {
+        max-height: 70vh;
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border-bottom: 1px solid var(--border);
+        overflow-y: auto;
+      }
+    }
+
+    .content {
+      margin: 0;
+      padding: 1rem;
+    }
+  }
+
+  .modal nav.open {
+    background-color: var(--surface-raised);
   }
 }
 </style>

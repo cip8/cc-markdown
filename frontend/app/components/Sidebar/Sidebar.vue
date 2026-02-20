@@ -1,19 +1,19 @@
 <template>
-  <div :class="{ 'sidebar-mask': isMobile() && isOpened }" />
+  <div :class="{ 'sidebar-mask': isMobile && isOpened }" />
   <Resizable>
-    <Dock v-if="!isMobile() && preferences.get('view_dock').value" />
-    <div class="sidebar" :class="{ compact: preferences.get('compactMode').value }">
+    <Dock v-if="!isMobile && viewDock" />
+    <div class="sidebar" :class="{ compact: compactMode }">
       <section class="header">
         <span class="name">
           <IconApp />
-          <NuxtLink style="font-family: Arial; font-size: 19px; font-weight: 600" to="/dashboard">Alexandrie</NuxtLink>
+          <NuxtLink class="home-link" to="/dashboard">Alexandrie</NuxtLink>
         </span>
         <IconClose class="btn" />
       </section>
-      <input v-model="filter" type="text" placeholder="Search or ctrl + q" />
+      <input v-model="filter" type="text" :placeholder="t('components.sidebar.searchPlaceholder')" />
 
       <div v-if="userStore.user" class="user">
-        <img :src="useAvatar(userStore.user)" alt="Avatar" style="width: 25px; height: 25px; border-radius: 50%" />
+        <img :src="avatarURL(userStore.user)" alt="Avatar" class="avatar" />
         <div class="details">
           <NuxtLink to="/dashboard/settings?p=profile">
             <div>{{ userStore.user.username }}</div>
@@ -22,25 +22,29 @@
           <div class="icons">
             <NuxtLink to="/dashboard/docs/new" class="nav-item" :prefetch="false" @click="onClick">
               <Icon name="add_file" />
-              <p class="hint-tooltip">New doc</p>
+              <p class="hint-tooltip">{{ t('components.sidebar.newDoc') }}</p>
             </NuxtLink>
-            <NuxtLink class="nav-item" @click="newCategory"
-              ><Icon name="add_folder" />
-              <p class="hint-tooltip">New category</p></NuxtLink
-            >
-            <NuxtLink class="nav-item" @click="sidebarTree.collapseAll"
-              ><Icon name="collapse" />
-              <p class="hint-tooltip">Close all</p></NuxtLink
-            >
-            <NuxtLink class="nav-item" @click="toggleDock"
-              ><Icon name="dock" />
-              <p class="hint-tooltip">Toggle dock</p></NuxtLink
-            >
+            <NuxtLink class="nav-item" @click="newCategory">
+              <Icon name="add_folder" />
+              <p class="hint-tooltip">{{ t('components.sidebar.newCategory') }}</p>
+            </NuxtLink>
+            <NuxtLink v-if="!nodesTree.isAllCollapsed()" class="nav-item" @click.stop="nodesTree.collapseAll">
+              <Icon name="collapse" />
+              <p class="hint-tooltip">{{ t('components.sidebar.closeAll') }}</p>
+            </NuxtLink>
+            <NuxtLink v-else class="nav-item" @click.stop="nodesTree.expandAll">
+              <Icon name="arrow-expand" />
+              <p class="hint-tooltip">{{ t('components.sidebar.openAll') }}</p>
+            </NuxtLink>
+            <NuxtLink class="nav-item" @click="toggleDock">
+              <Icon name="dock" />
+              <p class="hint-tooltip">{{ t('components.sidebar.toggleDock') }}</p>
+            </NuxtLink>
           </div>
         </div>
       </div>
       <SidebarWorkspaces :options="workspaces" />
-      <CollapseItem v-for="item in navigationItems" :key="item.id" :item="item" :root="true" />
+      <CollapseItem v-for="item in navigationItems(sidebarItemsPrefs)" :key="item.id" :item="item" :root="true" />
       <hr style="width: 100%; margin: 5px 0" />
 
       <template v-if="tree.length">
@@ -60,40 +64,48 @@ import Resizable from './Resizable.vue';
 import IconClose from './IconClose.vue';
 import SidebarSkeleton from './SidebarSkeleton.vue';
 import { navigationItems } from './helpers';
-import NewCategoryModal from '~/pages/dashboard/categories/_modals/CreateCategoryModal.vue';
+import NewCategoryModal from '~/components/Node/Modals/CreateCategory.vue';
 import Dock from './Dock.vue';
+import { filterTreeByLabel } from '~/helpers/TreeBuilder';
 
-const { isOpened, hasSidebar, filtered } = useSidebar();
 const nodesStore = useNodesStore();
-const preferences = usePreferences();
+const preferences = usePreferencesStore();
 const userStore = useUserStore();
+const { t } = useI18nT();
+
+const nodesTree = useNodesTree();
+const { isOpened, hasSidebar, filtered } = useSidebar();
+const { isMobile } = useDevice();
+const { avatarURL } = useApi();
+
+const viewDock = preferences.get('view_dock');
+const compactMode = preferences.get('compactMode');
+const sidebarItemsPrefs = preferences.get('sidebarItems');
+
 const filter = ref<string>('');
 const workspaces = computed(() => [...nodesStore.getAll.filter(c => c.role === 1).map(c => ({ text: c.name, value: c.id, meta: c }))]);
 const isLoading = computed(() => nodesStore.isFetching);
 
-const sidebarTree = useSidebarTree();
 const toggleDock = () => preferences.set('view_dock', !preferences.get('view_dock').value);
-const filterItems = (items: Item[]): Item[] => {
-  if (!filter.value.trim()) return items;
-  return filterRecursive(items, filter);
-};
 
-const tree = computed(() => filterItems(filtered.value));
+const tree = computed(() => {
+  if (!filter.value.trim()) return filtered.value;
+  return filterTreeByLabel(filtered.value, filter.value);
+});
 
 const handleClickOutside = (e: MouseEvent) => {
   if (isOpened.value && e.target && !(e.target as Element).closest('.sidebar') && !(e.target as Element).closest('.open-sidebar')) isOpened.value = false;
 };
 const newCategory = () => {
-  onClick();
   useModal().add(new Modal(shallowRef(NewCategoryModal), { props: { role: 2 } }));
 };
 const onClick = () => {
-  if (isMobile()) isOpened.value = false;
+  if (isMobile.value) isOpened.value = false;
 };
 
 onMounted(() => {
   hasSidebar.value = true;
-  if (isMobile()) return document.addEventListener('click', handleClickOutside);
+  if (isMobile.value) return document.addEventListener('click', handleClickOutside);
   // ELSE: Desktop
   isOpened.value = true;
 });
@@ -108,13 +120,19 @@ onBeforeUnmount(() => {
   width: 100%;
   max-height: 100%;
   padding: 0.5rem 0.2rem 0.5rem 0.5rem;
-  background: var(--bg-color);
+  background: var(--surface-base);
   overflow-y: auto;
   scrollbar-gutter: stable;
 
   &::-webkit-scrollbar-thumb {
     background: transparent;
   }
+}
+
+.home-link {
+  font-family: Arial;
+  font-size: 19px;
+  font-weight: 600;
 }
 
 .header {
@@ -126,7 +144,7 @@ onBeforeUnmount(() => {
   .btn {
     width: 30px;
     cursor: pointer;
-    fill: var(--font-color);
+    fill: var(--text-body);
   }
 
   .name {
@@ -138,7 +156,8 @@ onBeforeUnmount(() => {
 }
 
 .nav-item:hover .hint-tooltip {
-  display: block;
+  opacity: 1;
+  visibility: visible;
 }
 
 .icons {
@@ -153,13 +172,6 @@ onBeforeUnmount(() => {
     &:hover {
       background: var(--selection-color);
     }
-
-    svg {
-      width: 20px;
-      height: 20px;
-      margin: 0;
-      fill: var(--font-color);
-    }
   }
 }
 
@@ -167,10 +179,10 @@ input {
   height: 30px;
   margin: 3px 0;
   border: none;
-  background-color: var(--bg-contrast);
+  background-color: var(--surface-raised);
   background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="%235b5967" height="24" viewBox="0 -960 960 960" width="22"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>');
   background-position: 5px;
-  transition: background-color $transition-duration;
+  transition: background-color $transition-base;
   background-repeat: no-repeat;
   outline: none;
   padding-left: 30px;
@@ -187,11 +199,17 @@ input {
     font-size: 0.85rem;
     justify-content: space-between;
     margin-left: 5px;
+  }
 
-    .email {
-      font-size: 0.7rem;
-      color: var(--font-color-light);
-    }
+  .email {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .avatar {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
   }
 }
 
@@ -209,6 +227,6 @@ input {
   display: flex;
   width: 100vw;
   height: 100vh;
-  background-color: rgb(0 0 0 / 50%);
+  background-color: var(--overlay-backdrop);
 }
 </style>

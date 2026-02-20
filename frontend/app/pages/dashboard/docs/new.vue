@@ -1,30 +1,36 @@
 <template>
-  <MarkdownEditor :doc="document" @save="data => save(data)" @exit="exit" />
+  <LazyMarkdownEditor :doc="document" @save="data => save(data)" @exit="exit" />
 </template>
 <script lang="ts" setup>
-import MarkdownEditor from '~/components/MarkdownEditor/LazyMarkdownEditor.vue';
 import type { Node } from '~/stores';
 
+interface NewDocumentQuery {
+  parent_id?: string
+}
+
+definePageMeta({ breadcrumb: {i18n: 'common.actions.new'} });
+
 const store = useNodesStore();
-definePageMeta({ breadcrumb: 'New' });
-
-const defaultParent = (useRoute().query.cat as string | undefined) || useSidebar().workspaceId.value || undefined;
-
-const document = ref<Partial<Node>>({
-  parent_id: ['root', 'shared'].includes(defaultParent || '') ? undefined : defaultParent,
-  accessibility: 1,
-  role: 3,
-});
 const notifications = useNotifications();
+const route = useRoute();
+const sidebar = useSidebar();
+
+const routeQuery = computed<NewDocumentQuery>(() => route.query);
+const defaultParent = computed(() => routeQuery.value.parent_id || sidebar.workspaceId.value || undefined);
+const document = computed<Partial<Node>>(() => ({
+  accessibility: 1,
+  parent_id: ['root', 'shared'].includes(defaultParent.value || '') ? undefined : defaultParent.value,
+  role: 3,
+}));
 
 function save(doc: Node) {
   store
     .post(doc)
     .then(d => {
-      notifications.add({ type: 'success', title: 'Document successfully posted' });
+      notifications.add({ title: 'Document successfully posted', type: 'success' });
       useRouter().push(`/dashboard/docs/edit/${d.id}`);
     })
-    .catch(e => notifications.add({ type: 'error', title: 'Error', message: e }));
+    .catch(e => notifications.add({ message: e, title: 'Error', type: 'error' }));
 }
 const exit = () => useRouter().push('/dashboard');
 </script>

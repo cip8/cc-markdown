@@ -1,31 +1,28 @@
 <template>
-  <div class="container">
-    <div class="header">
-      <input v-model="searchInput" type="text" placeholder="Search..." />
-      <!-- Actions groupées (slot) -->
+  <div class="table">
+    <header>
+      <input v-model="searchInput" type="text" :placeholder="t('components.dataTable.searchPlaceholder')" />
       <slot v-if="selectedRows.length > 0" name="bulk-actions" :selected="selectedRows"> </slot>
-    </div>
+    </header>
 
-    <div class="table-wrapper">
+    <div class="wrapper">
       <table>
         <thead>
           <tr>
-            <!-- Case "Select all" -->
             <th>
               <input type="checkbox" style="width: 20px" :checked="selectedRows.length > 0" @change="toggleSelectAll" />
             </th>
-            <th v-for="header in headers" :key="header.key">
+            <th v-for="header in headers" :key="header.key" :class="header.align && `align-${header.align}`">
               {{ header.label }}
             </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(row, index) in data" :key="index">
-            <!-- Case à cocher -->
             <td>
               <input v-model="selectedRows" type="checkbox" :value="row" style="width: 20px" />
             </td>
-            <td v-for="header in headers" :key="header.key">
+            <td v-for="header in headers" :key="header.key" :class="header.align && `align-${header.align}`">
               <!-- eslint-disable-next-line vue/no-v-html -->
               <span v-if="row[header.key]?.type === 'html'" v-html="row[header.key]?.content" />
               <span v-else-if="row[header.key]?.type === 'slot'">
@@ -38,11 +35,14 @@
           <!-- Footer -->
           <tr>
             <td colspan="100%">
-              <div class="footer">
+              <footer>
                 <p>
-                  Showing {{ paginator.startIndex.value }} to {{ paginator.endIndex.value }} of {{ paginator.totalItems.value }} entries |
+                  {{
+                    t('components.dataTable.showing', { start: paginator.startIndex.value, end: paginator.endIndex.value, total: paginator.totalItems.value })
+                  }}
+                  |
                   <span>
-                    <span>Rows per page</span>
+                    <span>{{ t('components.dataTable.rowsPerPage') }}</span>
                     <!-- eslint-disable-next-line vue/no-parsing-error -->
                     <select @change="(e: Event) => paginator.setMaxPerPage(parseInt((<HTMLSelectElement>e.target)?.value) || 10)">
                       <option value="10">10</option>
@@ -70,7 +70,7 @@
                   </button>
                   <button type="button" :disabled="!paginator.hasNext()" @click="paginator.next()">&gt;</button>
                 </div>
-              </div>
+              </footer>
             </td>
           </tr>
         </tbody>
@@ -82,14 +82,15 @@
 <script lang="ts" setup>
 import { Paginator } from '../helpers/paginator';
 
+const { t } = useI18nT();
 const props = defineProps<{ headers: Header[]; rows: Field[] }>();
-const itemsPerPage = ref(usePreferences().get('datatableItemsCount').value || 10);
+const itemsPerPage = usePreferencesStore().get('datatableItemsCount');
 const searchInput = ref('');
 
 // Pagination + filter
 const paginator = new Paginator<Field>(
   computed(() => props.rows),
-  itemsPerPage.value,
+  itemsPerPage.value || 10,
 );
 paginator.filter(row => {
   return Object.values(row).some(value => value.content?.toLowerCase().includes(searchInput.value.toLowerCase()));
@@ -128,6 +129,7 @@ const shouldShowEllipsisBefore = computed(() => {
 interface Header {
   key: string;
   label: string;
+  align?: 'left' | 'center' | 'right';
 }
 export interface Field<V = unknown> {
   [key: string]: {
@@ -139,27 +141,29 @@ export interface Field<V = unknown> {
 </script>
 
 <style lang="scss" scoped>
-.container {
+.table {
   width: 100%;
-  border: 1.5px solid var(--border-color);
-  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
-.header {
+header {
   display: flex;
   padding: 0 10px;
   align-items: center;
 }
 
-.table-wrapper {
+.wrapper {
   width: 100%;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
   overflow-x: auto;
 }
 
 table {
   display: table;
   width: 100%;
+  margin: 0;
+  border-radius: 0;
   border-color: inherit;
   border-collapse: collapse;
   table-layout: auto;
@@ -174,41 +178,50 @@ td {
   white-space: nowrap;
 }
 
-td > span {
-  display: flex;
-  align-items: center;
-}
-
 th {
-  color: var(--font-color-dark);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface-transparent);
+
+  &.align-right {
+    text-align: right;
+    padding-right: 30px;
+  }
+
+  &.align-center {
+    text-align: center;
+  }
+
+  text-transform: uppercase;
 }
 
 td {
-  color: var(--font-color-light);
+  color: var(--text-secondary);
 
-  &:has(.footer) {
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-  }
-}
+  &.align-right {
+    text-align: right;
+    padding-right: 10px;
 
-button {
-  padding: 0.1rem 0.25rem;
-  border: none;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-right: 20px;
-
-  &:disabled {
-    background-color: var(--disabled-color);
-    cursor: not-allowed;
+    > span {
+      justify-content: flex-end;
+    }
   }
 
-  &:hover,
-  &.active {
-    font-weight: bold;
-    transform: none;
+  &.align-center {
+    text-align: center;
+
+    > span {
+      justify-content: center;
+    }
+  }
+
+  > span {
+    display: flex;
+    align-items: center;
+  }
+
+  &:has(footer) {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
 }
 
@@ -218,15 +231,29 @@ button {
   justify-content: center;
 }
 
-.pagination button {
+button {
   margin: 0 5px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+
+  &:hover {
+    border-color: var(--primary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    color: white;
+    background-color: var(--primary);
+  }
 }
 
-.pagination .active {
-  background-color: var(--active-color);
-}
-
-.footer {
+footer {
   display: flex;
   width: 100%;
   justify-content: space-between;
@@ -234,39 +261,21 @@ button {
 
 select {
   max-width: 100px;
-  margin: 0;
-  padding: 0;
-  margin-left: 10px;
-}
-
-svg {
-  position: absolute;
-  top: 13px;
-  left: 13px;
-  fill: var(--grey);
+  margin: 0 0 0 10px;
+  padding: 4px 8px;
 }
 
 input {
   max-width: 300px;
   margin: 8px 5px;
   padding: 0.5rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
   border-radius: 5px;
 }
 
 .ellipsis {
   margin: 0 5px;
-  color: var(--font-color-dark);
-}
-
-@media screen and (width >= 1000px) {
-  .container {
-    zoom: 1;
-  }
-
-  table {
-    zoom: 1;
-  }
+  color: var(--text-primary);
 }
 
 @media screen and (width <= 768px) {

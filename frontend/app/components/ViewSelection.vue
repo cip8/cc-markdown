@@ -1,46 +1,95 @@
 <template>
   <div class="view-selection">
-    <button :class="{ active: view === 'table' }" @click="view = 'table'">
-      <Icon name="list" />
-    </button>
-    <span style="border-right: 1px solid var(--border-color)" />
-    <button :class="{ active: view === 'list' }" @click="view = 'list'">
-      <Icon name="table" />
+    <button v-for="option in viewOptions" :key="option.value" :class="{ active: view === option.value }" @click="view = option.value">
+      <Icon :name="option.icon" />
+      <p class="hint-tooltip">{{ option.label }}</p>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-const view = defineModel<'table' | 'list'>();
-const storedView = localStorage.getItem('viewSelection');
-if (storedView) view.value = storedView as 'table' | 'list';
-watch(view, newView => localStorage.setItem('viewSelection', newView as 'table' | 'list'));
+export type ViewMode = 'kanban' | 'list' | 'table';
+
+const props = withDefaults(
+  defineProps<{
+    showKanban?: boolean;
+  }>(),
+  {
+    showKanban: false,
+  },
+);
+
+const { t } = useI18nT();
+const view = defineModel<ViewMode>();
+
+const viewOptions = computed(() => {
+  const options = [
+    { icon: 'table', label: t('components.viewSelection.list'), value: 'list' as ViewMode },
+    { icon: 'list', label: t('components.viewSelection.table'), value: 'table' as ViewMode },
+  ];
+  if (props.showKanban) {
+    options.push({ icon: 'kanban', label: t('components.viewSelection.kanban'), value: 'kanban' as ViewMode });
+  }
+  return options;
+});
+
+watch(view, newView => {
+  if (newView) localStorage.setItem('viewSelection', newView);
+});
+
+onMounted(() => {
+  const storedView = localStorage.getItem('viewSelection');
+  const list = ['table', 'list'];
+  if (props.showKanban) list.push('kanban');
+  if (storedView && list.includes(storedView)) view.value = storedView as ViewMode;
+  else view.value = 'table';
+});
 </script>
 
 <style scoped lang="scss">
 .view-selection {
-  min-width: 80px;
-  margin: 2px 4px;
-  padding: 0 4px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  gap: 10px;
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  align-items: center;
+  gap: 2px;
 }
 
 button {
-  width: 35px;
-  height: 35px;
-  padding: 4px 8px;
-  transition: background-color 0.3s;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+  align-items: center;
   cursor: pointer;
+  justify-content: center;
+  position: relative;
+
+  &:hover {
+    color: var(--text-body);
+    background: var(--surface-base);
+    .hint-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
 
   &.active > svg {
     color: var(--primary) !important;
   }
 
-  svg {
-    width: 20px;
-    height: 20px;
+  :deep(svg) {
+    width: 18px;
+    height: 18px;
+    fill: currentcolor;
   }
 }
 </style>

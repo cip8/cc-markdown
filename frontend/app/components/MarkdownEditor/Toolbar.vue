@@ -1,19 +1,118 @@
 <template>
   <div class="toolbar">
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <button v-for="item in toolbar" :key="item.name" :title="item.name" class="btn" @click="emitAction(item.action)">
-      <Icon :name="item.icon" display="lg" />
-    </button>
-    <VoiceRecognition @transcription="handleTranscription" />
-    <AppSelect v-if="!minimal" v-model="localValue.parent_id" :items="categories" placeholder="Select category" size="300px" class="entry" />
+    <!-- Text Formatting Group -->
+    <div :class="['toolbar-group', { 'no-mobile': mobileSimplifiedView }]">
+      <div class="group-buttons">
+        <button v-for="item in formattingTools" :key="item.name" class="toolbar-btn" :aria-label="item.name" @click="emitAction(item.action)">
+          <Icon :name="item.icon" />
+          <span class="tooltip"
+            >{{ item.name }}<kbd v-if="item.shortcut">{{ item.shortcut }}</kbd></span
+          >
+        </button>
+      </div>
+    </div>
 
-    <div class="help">
-      <button @click="openSettings">
-        <Icon name="settings" display="lg" fill="var(--font-color-light)" />
-      </button>
-      <button @click="openHelp">
-        <Icon name="help" display="lg" fill="var(--font-color-light)" />
-      </button>
+    <div :class="['toolbar-divider', { 'no-mobile': mobileSimplifiedView }]" />
+
+    <!-- Extended Formatting Group -->
+    <div :class="['toolbar-group', { 'no-mobile': mobileSimplifiedView }]">
+      <div class="group-buttons">
+        <button v-for="item in extendedFormattingTools" :key="item.name" class="toolbar-btn" :aria-label="item.name" @click="emitAction(item.action)">
+          <Icon :name="item.icon" />
+          <span class="tooltip"
+            >{{ item.name }}<kbd v-if="item.shortcut">{{ item.shortcut }}</kbd></span
+          >
+        </button>
+      </div>
+    </div>
+
+    <div :class="['toolbar-divider', { 'no-mobile': mobileSimplifiedView }]" />
+
+    <!-- Insert Group -->
+    <div :class="['toolbar-group', { 'no-mobile': mobileSimplifiedView }]">
+      <div class="group-buttons">
+        <button v-for="item in insertTools" :key="item.name" class="toolbar-btn" :aria-label="item.name" @click="emitAction(item.action)">
+          <Icon :name="item.icon" />
+          <span class="tooltip"
+            >{{ item.name }}<kbd v-if="item.shortcut">{{ item.shortcut }}</kbd></span
+          >
+        </button>
+      </div>
+    </div>
+
+    <div :class="['toolbar-divider', { 'no-mobile': mobileSimplifiedView }]" />
+
+    <!-- Structure Group -->
+    <div :class="['toolbar-group', { 'no-mobile': mobileSimplifiedView }]">
+      <div class="group-buttons">
+        <button v-for="item in structureTools" :key="item.name" class="toolbar-btn" :aria-label="item.name" @click="emitAction(item.action)">
+          <Icon :name="item.icon" />
+          <span class="tooltip"
+            >{{ item.name }}<kbd v-if="item.shortcut">{{ item.shortcut }}</kbd></span
+          >
+        </button>
+      </div>
+    </div>
+
+    <div :class="['toolbar-divider', { 'no-mobile': mobileSimplifiedView }]" />
+
+    <!-- Voice & Category -->
+    <div class="toolbar-group" style="align-items: center; flex: 1; flex-direction: row; gap: 4px">
+      <div class="group-buttons">
+        <VoiceRecognition :class="{ 'no-mobile': mobileSimplifiedView }" @transcription="handleTranscription" />
+      </div>
+      <AppSelect v-model="localValue.parent_id" :items="categories" nullable :placeholder="t('markdown.toolbar.category')" class="category-select" />
+    </div>
+
+    <!-- Right Section -->
+    <div class="toolbar-right">
+      <!-- Stats Badge -->
+      <div v-if="displayStats" class="stats-badge no-tablet">
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.words }}</span>
+          <span class="stat-label">{{ t('markdown.stats.words') }}</span>
+        </div>
+        <div class="stat-divider" />
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.characters }}</span>
+          <span class="stat-label">{{ t('markdown.stats.chars') }}</span>
+        </div>
+        <div class="stat-divider" />
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.lines }}</span>
+          <span class="stat-label">{{ t('markdown.stats.lines') }}</span>
+        </div>
+      </div>
+
+      <!-- Actions & Settings Group -->
+      <div class="action-buttons">
+        <button class="toolbar-btn btn-ghost" :aria-label="t('markdown.toolbar.clearFormatting')" @click="emitAction('clearFormatting')">
+          <Icon name="format/clear-formatting" />
+          <span class="tooltip">{{ t('markdown.toolbar.clearFormatting') }}<kbd>Ctrl+Shift+X</kbd></span>
+        </button>
+        <button
+          v-for="item in actionTools"
+          :key="item.name"
+          class="toolbar-btn"
+          :class="{ 'btn-primary': item.action === 'save', 'btn-accent': item.action === 'preview' }"
+          :aria-label="item.name"
+          @click="emitAction(item.action)"
+        >
+          <Icon :name="item.icon" />
+          <span class="tooltip"
+            >{{ item.name }}<kbd v-if="item.shortcut">{{ item.shortcut }}</kbd></span
+          >
+        </button>
+        <div class="action-divider" />
+        <button class="toolbar-btn btn-ghost" aria-label="Settings" @click="openSettings">
+          <Icon name="settings" display="lg" />
+          <span class="tooltip">{{ t('markdown.toolbar.editorSettings') }}</span>
+        </button>
+        <button class="toolbar-btn btn-ghost" aria-label="Help" @click="openHelp">
+          <Icon name="help" display="lg" />
+          <span class="tooltip">{{ t('markdown.toolbar.markdownSyntax') }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -24,10 +123,31 @@ import ModalSyntax from './ModalSyntax.vue';
 import VoiceRecognition from './VoiceRecognition.vue';
 import EditorPreferences from './EditorPreferences.vue';
 
+const { t } = useI18nT();
+
 const props = defineProps<{
   modelValue: Partial<Node>;
-  minimal?: boolean;
 }>();
+
+const preferences = usePreferencesStore();
+
+const mobileSimplifiedView = preferences.get('editorSimplifiedViewOnMobile');
+const displayStats = preferences.get('editorDisplayStats');
+
+const stats = computed(() => {
+  const content = props.modelValue.content || '';
+  const words = content
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 0);
+  const wordCount = words.length;
+  return {
+    characters: content.length,
+    words: wordCount,
+    lines: content.split('\n').length,
+  };
+});
+
 const handleTranscription = (text: string) => {
   emit('execute-action', 'insertText', text);
 };
@@ -46,139 +166,323 @@ const emitAction = (action: string) => emit('execute-action', action);
 const openHelp = () => useModal().add(new Modal(shallowRef(ModalSyntax), { size: 'large' }));
 const openSettings = () => useModal().add(new Modal(shallowRef(EditorPreferences), { size: 'medium' }));
 
-const categories = computed(() => new TreeStructure(useSidebarTree().nodes.value.filter(n => n.data.role <= 2)).generateTree());
+const nodesTree = useNodesTree();
+const categories = nodesTree.treeUpToRole(2);
 
-const toolbar = [
-  {
-    name: 'Bold',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M272-200v-560h221q65 0 120 40t55 111q0 51-23 78.5T602-491q25 11 55.5 41t30.5 90q0 89-65 124.5T501-200H272Zm121-112h104q48 0 58.5-24.5T566-372q0-11-10.5-35.5T494-432H393v120Zm0-228h93q33 0 48-17t15-38q0-24-17-39t-44-15h-95v109Z"/></svg>',
-    action: 'bold',
-  },
-  {
-    name: 'Italic',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200v-100h160l120-360H320v-100h400v100H580L460-300h140v100H200Z"/></svg>',
-    action: 'italic',
-  },
-  {
-    name: 'Underline',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120v-80h560v80H200Zm280-160q-101 0-157-63t-56-167v-330h103v336q0 56 28 91t82 35q54 0 82-35t28-91v-336h103v330q0 104-56 167t-157 63Z"/></svg>',
-    action: 'underline',
-  },
-  {
-    name: 'Strike',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M486-160q-76 0-135-45t-85-123l88-38q14 48 48.5 79t85.5 31q42 0 76-20t34-64q0-18-7-33t-19-27h112q5 14 7.5 28.5T694-340q0 86-61.5 133T486-160ZM80-480v-80h800v80H80Zm402-326q66 0 115.5 32.5T674-674l-88 39q-9-29-33.5-52T484-710q-41 0-68 18.5T386-640h-96q2-69 54.5-117.5T482-806Z"/></svg>',
-    action: 'strike',
-  },
-  {
-    name: 'Link',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/></svg>',
-    action: 'link',
-  },
-  {
-    name: 'Image',
-    icon: 'image',
-    action: 'image',
-  },
-  {
-    name: 'Code',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z"/></svg>',
-    action: 'code',
-  },
-  {
-    name: 'Quote',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m228-240 92-160q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 23-5.5 42.5T458-480L320-240h-92Zm360 0 92-160q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 23-5.5 42.5T818-480L680-240h-92ZM320-500q25 0 42.5-17.5T380-560q0-25-17.5-42.5T320-620q-25 0-42.5 17.5T260-560q0 25 17.5 42.5T320-500Zm360 0q25 0 42.5-17.5T740-560q0-25-17.5-42.5T680-620q-25 0-42.5 17.5T620-560q0 25 17.5 42.5T680-500Zm0-60Zm-360 0Z"/></svg>',
-    action: 'quote',
-  },
-  {
-    name: 'List',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-600v-80h560v80H280Zm0 160v-80h560v80H280Zm0 160v-80h560v80H280ZM160-600q-17 0-28.5-11.5T120-640q0-17 11.5-28.5T160-680q17 0 28.5 11.5T200-640q0 17-11.5 28.5T160-600Zm0 160q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520q17 0 28.5 11.5T200-480q0 17-11.5 28.5T160-440Zm0 160q-17 0-28.5-11.5T120-320q0-17 11.5-28.5T160-360q17 0 28.5 11.5T200-320q0 17-11.5 28.5T160-280Z"/></svg>',
-    action: 'list',
-  },
-  {
-    name: 'Ordered List',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M680-80v-60h100v-30h-60v-60h60v-30H680v-60h120q17 0 28.5 11.5T840-280v40q0 17-11.5 28.5T800-200q17 0 28.5 11.5T840-160v40q0 17-11.5 28.5T800-80H680Zm0-280v-110q0-17 11.5-28.5T720-510h60v-30H680v-60h120q17 0 28.5 11.5T840-560v70q0 17-11.5 28.5T800-450h-60v30h100v60H680Zm60-280v-180h-60v-60h120v240h-60ZM120-200v-80h480v80H120Zm0-240v-80h480v80H120Zm0-240v-80h480v80H120Z"/></svg>',
-    action: 'orderedList',
-  },
-  {
-    name: 'Table',
-    icon: 'grid',
-    action: 'gridOrganization',
-  },
-  {
-    name: 'Color',
-    icon: `color`,
-    action: 'openColorPicker',
-  },
-  {
-    name: 'Preview',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-480H200v480Zm280-80q-82 0-146.5-44.5T240-440q29-71 93.5-115.5T480-600q82 0 146.5 44.5T720-440q-29 71-93.5 115.5T480-280Zm0-60q56 0 102-26.5t72-73.5q-26-47-72-73.5T480-540q-56 0-102 26.5T306-440q26 47 72 73.5T480-340Zm0-100Zm0 60q25 0 42.5-17.5T540-440q0-25-17.5-42.5T480-500q-25 0-42.5 17.5T420-440q0 25 17.5 42.5T480-380Z"/></svg>',
-    action: 'preview',
-  },
-  {
-    name: 'Save',
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M840-680v480q0 33-23.5 56.5T760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h480l160 160Zm-80 34L646-760H200v560h560v-446ZM480-240q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35ZM240-560h360v-160H240v160Zm-40-86v446-560 114Z"/></svg>',
-    action: 'save',
-  },
-  {
-    name: 'Go to Document',
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M400-280h160v-80H400v80Zm0-160h280v-80H400v80ZM280-600h400v-80H280v80Zm200 120ZM265-80q-79 0-134.5-55.5T75-270q0-57 29.5-102t77.5-68H80v-80h240v240h-80v-97q-37 8-61 38t-24 69q0 46 32.5 78t77.5 32v80Zm135-40v-80h360v-560H200v160h-80v-160q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H400Z"/></svg>`,
-    action: 'goto',
-  },
-];
+// Tool type with optional shortcut
+interface ToolItem {
+  name: string;
+  icon: string;
+  action: string;
+  shortcut?: string;
+}
+
+const formattingTools = computed<ToolItem[]>(() => [
+  { name: t('markdown.toolbar.bold'), icon: 'format/bold', action: 'bold', shortcut: 'Ctrl+B' },
+  { name: t('markdown.toolbar.italic'), icon: 'format/italic', action: 'italic', shortcut: 'Ctrl+I' },
+  { name: t('markdown.toolbar.underline'), icon: 'format/underline', action: 'underline', shortcut: 'Ctrl+U' },
+  { name: t('markdown.toolbar.strikethrough'), icon: 'format/strikethrough', action: 'strike', shortcut: 'Ctrl+Shift+S' },
+  { name: t('markdown.toolbar.highlight'), icon: 'format/highlight', action: 'mark', shortcut: 'Ctrl+Shift+H' },
+]);
+
+const extendedFormattingTools = computed<ToolItem[]>(() => [
+  { name: t('markdown.toolbar.superscript'), icon: 'format/superscript', action: 'superscript', shortcut: 'Ctrl+↑' },
+  { name: t('markdown.toolbar.subscript'), icon: 'format/subscript', action: 'subscript', shortcut: 'Ctrl+↓' },
+  { name: t('markdown.toolbar.math'), icon: 'maths', action: 'mathInline', shortcut: 'Ctrl+M' },
+]);
+
+const insertTools = computed<ToolItem[]>(() => [
+  { name: t('markdown.toolbar.link'), icon: 'format/link', action: 'link', shortcut: 'Ctrl+K' },
+  { name: t('markdown.toolbar.image'), icon: 'format/image', action: 'image', shortcut: 'Ctrl+Shift+I' },
+  { name: t('markdown.toolbar.inlineCode'), icon: 'format/code', action: 'code', shortcut: 'Ctrl+E' },
+  { name: t('markdown.toolbar.codeBlock'), icon: 'format/code-block', action: 'codeBlock', shortcut: 'Ctrl+Shift+C' },
+  { name: t('markdown.toolbar.color'), icon: 'format/color', action: 'openColorPicker' },
+  { name: t('markdown.toolbar.footnote'), icon: 'format/footnote', action: 'footnote' },
+]);
+
+const structureTools = computed<ToolItem[]>(() => [
+  { name: t('markdown.toolbar.heading'), icon: 'format/h1', action: 'h1', shortcut: 'Ctrl+[1-6]' },
+  { name: t('markdown.toolbar.quote'), icon: 'format/quote', action: 'quote', shortcut: 'Ctrl+Shift+.' },
+  { name: t('markdown.toolbar.bulletList'), icon: 'format/list-bulleted', action: 'list', shortcut: 'Ctrl+Shift+8' },
+  { name: t('markdown.toolbar.numberedList'), icon: 'format/list-ordered', action: 'orderedList', shortcut: 'Ctrl+Shift+7' },
+  { name: t('markdown.toolbar.taskList'), icon: 'format/task-list', action: 'taskList', shortcut: 'Ctrl+Shift+9' },
+  { name: t('markdown.toolbar.table'), icon: 'format/table', action: 'gridOrganization' },
+  { name: t('markdown.toolbar.horizontalRule'), icon: 'format/horizontal-rule', action: 'horizontalRule', shortcut: 'Ctrl+Shift+R' },
+]);
+
+const actionTools = computed<ToolItem[]>(() => [
+  { name: t('markdown.toolbar.preview'), icon: 'preview', action: 'preview', shortcut: 'Ctrl+P' },
+  { name: t('markdown.toolbar.save'), icon: 'save', action: 'save', shortcut: 'Ctrl+S' },
+  { name: t('markdown.toolbar.goToDocument'), icon: 'file_shortcut', action: 'goto' },
+]);
 </script>
 <style scoped lang="scss">
 .toolbar {
   display: flex;
   width: 100%;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  color: var(--font-color-dark);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow $transition-base ease;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0 3px;
+  gap: 4px 6px;
+  margin-top: 8px;
+  overflow-x: clip;
   user-select: none;
-}
-
-.btn {
-  display: flex;
-  margin: 0;
-  padding: 4px;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-  align-items: center;
-  justify-content: center;
-  transform: none;
 
   &:hover {
-    background-color: var(--primary-bg);
+    box-shadow: var(--shadow-md);
+  }
+}
 
-    &:deep(svg) {
-      transition: fill 0.2s;
-      fill: var(--primary);
+.toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-buttons {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-transparent);
+  gap: 1px;
+}
+
+.toolbar-btn {
+  position: relative;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+  align-items: center;
+  cursor: pointer;
+  justify-content: center;
+
+  &:hover {
+    background: var(--surface-overlay);
+
+    .tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      visibility: visible;
     }
   }
 }
 
-input {
-  display: inline-block;
-  max-width: 350px;
+.btn-primary {
+  border: 1px solid var(--border);
+  background: var(--primary-bg);
+
+  &:hover {
+    border-color: var(--primary);
+    background: var(--primary-bg);
+  }
 }
 
-.entry {
-  background-color: var(--bg-color);
+.btn-accent {
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+
+  &:hover {
+    border-color: var(--primary);
+    background: var(--primary-bg);
+  }
 }
 
-.help {
-  margin-left: auto;
+.btn-ghost {
+  opacity: 0.9;
 
-  &:hover:deep(svg) {
-    fill: var(--font-color-dark);
+  &:hover {
+    background: var(--surface-transparent);
+    opacity: 1;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--surface-base);
+  background: var(--text-inverse);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transition:
+    opacity $transition-base ease,
+    transform $transition-base ease,
+    visibility $transition-base ease;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-4px);
+  visibility: hidden;
+  white-space: nowrap;
+
+  &::before {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    border-bottom: 5px solid var(--text-inverse);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    content: '';
+    transform: translateX(-50%);
   }
 
-  button {
-    margin: 0;
+  kbd {
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 2px;
+  background: var(--border);
+  opacity: 0.4;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.stats-badge {
+  display: flex;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--surface-raised) 0%, var(--surface-overlay) 100%);
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-item {
+  display: flex;
+  line-height: 1.1;
+  align-items: center;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.action-buttons {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-transparent);
+  gap: 3px;
+}
+
+.action-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--border);
+  opacity: 0.5;
+  align-self: center;
+}
+
+.category-select {
+  min-width: 110px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+}
+
+// Responsive adjustments
+@media (width <= 900px) {
+  .toolbar {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .group-label {
+    display: none;
+  }
+
+  .toolbar-btn {
+    width: 28px;
+    height: 28px;
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+
+      :deep(svg) {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .stats-badge {
     padding: 4px 8px;
+  }
+
+  .stat-value {
+    font-size: 11px;
+  }
+
+  .stat-label {
+    font-size: 8px;
+  }
+}
+
+@media (width <= 700px) {
+  .toolbar-divider {
+    display: none;
+  }
+
+  .toolbar-group {
+    flex-direction: row;
+  }
+
+  .stats-badge {
+    display: none;
+  }
+}
+
+// Tablet hide
+.no-tablet {
+  @media (width <= 1024px) {
+    display: none;
   }
 }
 </style>

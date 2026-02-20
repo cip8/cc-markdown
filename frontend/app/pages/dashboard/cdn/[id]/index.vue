@@ -1,82 +1,72 @@
 <template>
-  <div class="card-component">
+  <div class="page-card">
     <header>
-      <h3>Update ressource</h3>
+      <h1>{{ t('cdn.edit.title') }}</h1>
+      <NuxtLink :to="`/dashboard/cdn/${resource?.id}/preview`" class="btn-icon">
+        <AppButton type="secondary">Preview</AppButton>
+      </NuxtLink>
     </header>
-    <p>Manage ressources and files on the server. You can edit metadata and delete file from the server.</p>
-    <form v-if="ressource" @submit.prevent>
+    <p>{{ t('cdn.edit.description') }}</p>
+    <form v-if="resource" @submit.prevent>
       <div class="form-row">
         <div class="form-column">
-          <label>ID</label>
-          <input id="id" type="text" :value="ressource.id" disabled />
+          <label>{{ t('common.labels.id') }}</label>
+          <input id="id" type="text" :value="resource.id" disabled />
         </div>
         <div class="form-column">
-          <label>Size</label>
-          <input id="size" type="text" :value="readableFileSize(ressource.size ?? 0)" disabled />
+          <label>{{ t('common.labels.size') }}</label>
+          <input id="size" type="text" :value="readableFileSize(resource.size ?? 0)" disabled />
         </div>
       </div>
-      <label>Name</label>
-      <input id="name" v-model="ressource.name" type="text" required />
-      <label style="display: flex; align-items: center">Parent <AppHint text="To organize your uploads" /></label>
-      <AppSelect v-model="ressource.parent_id" :items="tree" :disabled="(i) => (i as Item).data?.role !== 3" placeholder="Select a ressource parent" />
-      <label>Type</label>
-      <input id="id" type="text" :value="ressource.metadata?.filetype" disabled />
-      <label>Original path</label>
-      <input id="content" type="text" :value="ressource.content" disabled />
-      <label>Path</label>
-      <input id="path" type="text" :value="ressource.metadata?.transformed_path" disabled />
+      <label>{{ t('common.labels.name') }}</label>
+      <input id="name" v-model="resource.name" type="text" required />
+      <label style="display: flex; align-items: center">{{ t('common.labels.parent') }} <AppHint text="To organize your uploads" /></label>
+      <AppSelect v-model="resource.parent_id" nullable :items="nodesTree" placeholder="Select a resource parent" />
+      <label>{{ t('common.labels.type') }}</label>
+      <input id="id" type="text" :value="resource.metadata?.filetype" disabled />
+      <label>{{ t('cdn.labels.originalPath') }}</label>
+      <input id="content" type="text" :value="resource.content" disabled />
+      <label>{{ t('cdn.labels.path') }}</label>
+      <input id="path" type="text" :value="resource.metadata?.transformed_path" disabled />
       <p style="overflow-wrap: break-word">
-        Ressource:
-        <a :href="`${CDN}/${ressource.user_id}/${ressource.metadata?.transformed_path || ressource.content}`" target="_blank">{{
-          `${CDN}/${ressource.user_id}/${ressource.metadata?.transformed_path || ressource.content}`
-        }}</a>
+        Resource:
+        <a :href="resourceURL(resource)" target="_blank">{{ resourceURL(resource) }}</a>
       </p>
-      <div style="display: flex; justify-content: flex-end">
-        <AppButton type="primary" class="btn primary" @click="updateCategory">Update</AppButton>
-        <AppButton type="danger" @click="showDeleteModal">Delete</AppButton>
-      </div>
-      <h4>Preview</h4>
-      <div class="preview">
-        <img
-          v-if="(ressource.metadata?.filetype as string)?.startsWith('image/')"
-          :src="`${CDN}/${ressource.user_id}/${ressource.metadata?.transformed_path || ressource.content}`"
-          alt="Preview"
-        />
-        <p v-else>Preview not available for this file type.</p>
+      <div class="actions-row">
+        <AppButton type="primary" class="btn primary" @click="updateCategory">{{ t('common.actions.update') }}</AppButton>
+        <AppButton type="danger" @click="showDeleteModal">{{ t('common.actions.delete') }}</AppButton>
       </div>
     </form>
   </div>
 </template>
 
 <script lang="ts" setup>
-import DeleteRessourceModal from '../_modals/DeleteRessourceModal.vue';
-import { readableFileSize } from '~/helpers/ressources';
-definePageMeta({ breadcrumb: 'Edit' });
-const nodeStore = useNodesStore();
-const route = useRoute();
-const ressource = computed(() => nodeStore.getById(route.params.id as string));
-const { CDN } = useApi();
+import DeleteNodeModal from '~/components/Node/Modals/Delete.vue';
+import { readableFileSize } from '~/helpers/resources';
 
-const defaultItem: ANode = {
-  id: '',
-  label: 'None',
-  parent_id: '',
-  childrens: [],
-};
-const tree = computed(() => [defaultItem, ...useSidebarTree().tree.value]);
+definePageMeta({ breadcrumb: {i18n: 'common.actions.edit'} });
+
+const nodeStore = useNodesStore();
+const { t } = useI18nT();
+const route = useRoute();
+const { resourceURL } = useApi();
+
+const resource = computed(() => nodeStore.getById(route.params.id as string));
+
+const nodesTree = useNodesTree().treeUpToRole(3);
 
 const updateCategory = async () => {
-  if (ressource.value)
+  if (resource.value)
     nodeStore
-      .update(ressource.value)
+      .update(resource.value)
       .then(() => {
-        useNotifications().add({ type: 'success', title: 'Ressource updated' });
+        useNotifications().add({ title: 'Resource updated', type: 'success' });
         useRouter().push('/dashboard/cdn');
       })
-      .catch(e => useNotifications().add({ type: 'error', title: 'Error', message: e }));
+      .catch(e => useNotifications().add({ message: e, title: 'Error', type: 'error' }));
 };
 const showDeleteModal = () => {
-  useModal().add(new Modal(shallowRef(DeleteRessourceModal), { props: { ressources: [ressource.value?.id] } }));
+  useModal().add(new Modal(shallowRef(DeleteNodeModal), { props: { nodes: [resource.value], redirectTo: '/dashboard/cdn' }, size: 'small' }));
 };
 </script>
 
@@ -111,10 +101,7 @@ a {
   text-decoration: underline;
 }
 
-.preview {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  justify-content: center;
+.actions-row {
+  justify-content: flex-end;
 }
 </style>

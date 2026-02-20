@@ -1,11 +1,11 @@
 <template>
-  <div style="width: 100%; height: 100%">
+  <div class="skeleton-container">
     <div v-if="isLoading" class="sidebar-skeleton">
       <div v-for="n in 30" :key="n" class="skeleton-line" :style="{ marginRight: `${(n % 3) * 22}px` }" />
     </div>
     <div v-else class="empty-sidebar">
       <div class="icon">
-        <svg fill="var(--font-color-light)" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <svg fill="var(--text-secondary)" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
           <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
           <g id="SVGRepo_iconCarrier">
@@ -24,12 +24,15 @@
 </template>
 
 <script setup lang="ts">
-import { NuxtLink } from '#components';
-
 defineProps<{ isLoading: boolean }>();
 </script>
 
 <style scoped lang="scss">
+.skeleton-container {
+  width: 100%;
+  height: 100%;
+}
+
 .sidebar-skeleton {
   display: flex;
   padding: 0.5rem;
@@ -40,8 +43,8 @@ defineProps<{ isLoading: boolean }>();
 
 .skeleton-line {
   height: 20px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-contrast) 37%, var(--border-color) 63%);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface-raised) 37%, var(--border) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
@@ -60,7 +63,7 @@ defineProps<{ isLoading: boolean }>();
   display: flex;
   height: 100%;
   padding: 20% 1rem;
-  color: var(--font-color-light);
+  color: var(--text-secondary);
   text-align: center;
   flex-direction: column;
 }
@@ -71,7 +74,7 @@ defineProps<{ isLoading: boolean }>();
   svg {
     width: 100px;
     height: 100px;
-    stroke: var(--font-color-light);
+    stroke: var(--text-secondary);
   }
 }
 

@@ -4,7 +4,6 @@
       :items="flattenedItems"
       :selected-index="selectedIndex"
       :query="searchQuery"
-      empty-icon="search"
       @update-selected-index="$emit('updateSelectedIndex', $event)"
     />
   </div>
@@ -14,13 +13,10 @@
 import { quickActions, availablePages, type SearchResult, type BaseCommand } from '~/helpers/navigation';
 import SearchResultsList from './SearchResultsList.vue';
 
-const props = defineProps<{
-  searchQuery: string;
-  selectedIndex: number;
-}>();
-const documentStore = useNodesStore();
-
+const props = defineProps<{ searchQuery: string; selectedIndex: number }>();
 defineEmits<{ updateSelectedIndex: [index: number] }>();
+
+const documentStore = useNodesStore();
 
 function tokenize(text: string) {
   return text.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -41,7 +37,7 @@ const filteredActions = computed(() => filterByTokens(quickActions, a => `${a.ti
 
 const filteredDocuments = computed<SearchResult[]>(() =>
   documentStore
-    .search({ query: props.searchQuery })
+    .search({ query: props.searchQuery, role: 3 })
     .slice(0, 5)
     .map(d => ({
       id: d.id,

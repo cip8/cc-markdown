@@ -2,70 +2,43 @@ package services
 
 import (
 	"alexandrie/models"
+	"alexandrie/pkg/logger"
+	"alexandrie/repositories"
 	"alexandrie/types"
-	"database/sql"
 	"time"
 )
 
-type AuthService interface {
-	CreateSession(session *models.Session) (*models.Session, error)
-	GetSession(refreshToken string) (models.Session, error)
-	UpdateSession(session *models.Session) (*models.Session, error)
-	DeleteSession(id types.Snowflake) error
-	DeleteAllUserSessions(userId types.Snowflake) error
-	DeleteOldSessions() error
+type SessionService interface {
+	GetSessionsByUserId(userId types.Snowflake) ([]models.Session, error)
+	DeleteOldSessions()
 }
 
-func NewAuthService(db *sql.DB) AuthService {
-	return &Service{db: db}
+type sessionService struct {
+	sessionRepo repositories.SessionRepository
 }
 
-func (s *Service) CreateSession(session *models.Session) (*models.Session, error) {
-	_, err := s.db.Exec("INSERT INTO sessions (id, user_id, refresh_token, expire_token, last_refresh_timestamp, active, login_timestamp, logout_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		session.Id, session.UserId, session.RefreshToken, session.ExpireToken, session.LastRefreshTimestamp, session.Active, session.LoginTimestamp, session.LogoutTimestamp)
-	if err != nil {
-		return nil, err
+func NewSessionService(sessionRepo repositories.SessionRepository) SessionService {
+	s := &sessionService{
+		sessionRepo: sessionRepo,
 	}
-	return session, nil
+	go func() {
+		for {
+			s.DeleteOldSessions()
+			time.Sleep(1 * time.Hour)
+		}
+	}()
+	return s
 }
 
-func (s *Service) GetSession(refreshToken string) (models.Session, error) {
-	var session models.Session
-	s.db.QueryRow("SELECT * FROM sessions WHERE refresh_token = ?", refreshToken).Scan(
-		&session.Id, &session.UserId, &session.RefreshToken, &session.ExpireToken, &session.LastRefreshTimestamp, &session.Active, &session.LoginTimestamp, &session.LogoutTimestamp,
-	)
-	return session, nil
+func (s *sessionService) GetSessionsByUserId(userId types.Snowflake) ([]models.Session, error) {
+	return s.sessionRepo.GetByUserId(userId)
 }
 
-func (s *Service) UpdateSession(session *models.Session) (*models.Session, error) {
-	_, err := s.db.Exec("UPDATE sessions SET refresh_token = ?, expire_token = ?, last_refresh_timestamp = ?, active = ?, login_timestamp = ?, logout_timestamp = ? WHERE id = ?",
-		session.RefreshToken, session.ExpireToken, session.LastRefreshTimestamp, session.Active, session.LoginTimestamp, session.LogoutTimestamp, session.Id)
+func (s *sessionService) DeleteOldSessions() {
+	err := s.sessionRepo.DeleteOld()
 	if err != nil {
-		return nil, err
+		logger.Error("session", "Error during automatic deletion: "+err.Error())
+	} else {
+		logger.Success("session", "Old sessions deleted successfully.")
 	}
-	return session, nil
-}
-
-func (s *Service) DeleteSession(id types.Snowflake) error {
-	_, err := s.db.Exec("DELETE FROM sessions WHERE id = ?", id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Service) DeleteAllUserSessions(userId types.Snowflake) error {
-	_, err := s.db.Exec("DELETE FROM sessions WHERE user_id = ?", userId)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Service) DeleteOldSessions() error {
-	_, err := s.db.Exec("DELETE FROM sessions WHERE expire_token < ? OR active = 0", time.Now().UnixMilli())
-	if err != nil {
-		return err
-	}
-	return nil
 }

@@ -1,10 +1,18 @@
 # Environment Variables
 .env*
 !.env.supabase
+!.env.example
 
 # Public dir
 minio
 uploads
 minio.exe
+minio
+
+# Backend
 main.exe
-data
+
+# Development (debug & test files)
+test.vue
+
+.idea

@@ -1,48 +1,44 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-  <div style="width: 100%; padding: 1rem 0">
+  <div style="width: 100%; padding: 1rem 0" @contextmenu.prevent="showContextMenu">
     <div v-if="!error" style="display: flex; justify-content: space-between">
       <div :style="{ maxWidth: width }" class="doc-container">
-        <DocumentCardHeader :doc="node" style="margin-bottom: 20px" />
+        <NodeDocumentHeader :doc="node" style="margin-bottom: 20px" />
 
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <article
-          v-if="node"
-          ref="element"
-          :class="`${node.theme || preferencesStore.get('theme').value}-theme`"
-          style="max-width: 100%"
-          v-html="node.content_compiled"
-        />
-        <DocumentSkeleton v-else />
-        <DocumentCardFooter :document="node" :next="next" :previous="previous" />
+        <NodeDocumentContentCompiled v-if="node" ref="elementComponent" :node="node" />
+        <NodeDocumentSkeleton v-else />
+        <NodeDocumentFooter :document="node" :next="next" :previous="previous" />
       </div>
 
-      <div v-if="!isTablet() && !preferencesStore.get('hideTOC').value" class="toc">
-        <TableOfContent :doc="node" :element="element" style="width: 320px; margin-left: 20px" />
+      <div v-if="!devise.isTablet.value && !hideTOC" class="toc">
+        <NodeTOC :doc="node" :element="element" style="width: 320px; margin-left: 20px" />
       </div>
-
-      <div
-        class="no-print"
-        :style="{
-          marginRight: !isTablet() && preferencesStore.get('hideTOC').value && useSidebar().isOpened.value ? '200px' : '0px',
-          transition: 'margin 0.3s',
-        }"
-      />
     </div>
     <Error v-else :error="error" />
   </div>
 </template>
 <script setup lang="ts">
-import TableOfContent from './_components/table-of-content/TableOfContents.vue';
-import DocumentCardHeader from './_components/DocumentCardHeader.vue';
-import DocumentCardFooter from './_components/DocumentCardFooter.vue';
-import DocumentSkeleton from './_components/DocumentSkeleton.vue';
+import type { RouteLocationNormalizedLoaded } from 'vue-router';
+
 import type { Node } from '~/stores';
 
-const route = useRoute();
+import NodeContextMenu from '~/components/Node/Action/ContextMenu.vue';
+import NodeDocumentContentCompiled from '~/components/Node/Document/ContentCompiled.vue';
+import DeleteNodeModal from '~/components/Node/Modals/Delete.vue';
+
 const documentsStore = useNodesStore();
-const preferencesStore = usePreferences();
-const element = ref<HTMLElement>();
+const preferencesStore = usePreferencesStore();
+
+const devise = useDevice();
+const nodesTree = useNodesTree();
+const route = useRoute();
+const router = useRouter();
+
+const hideTOC = preferencesStore.get('hideTOC');
+const docSize = preferencesStore.get('docSize');
+
+const elementComponent = ref<InstanceType<typeof NodeDocumentContentCompiled>>();
+const element = computed(() => elementComponent.value?.rootElement as HTMLElement | undefined);
 
 const node = ref<Node | undefined>();
 const error = ref<false | string>(false);
@@ -67,38 +63,64 @@ watchEffect(async () => {
 });
 
 definePageMeta({
-  breadcrumb: () => {
-    const doc = useNodesStore().getById(useRoute().params.id as string);
+  breadcrumb: (route: RouteLocationNormalizedLoaded) => {
+    const doc = useNodesStore().getById(route.params.id as string);
     return doc?.name || '';
   },
 });
 
-const next = computed(() => useSidebarTree().structure.value.next(node.value?.id)?.data);
-const previous = computed(() => useSidebarTree().structure.value.previous(node.value?.id)?.data);
+const next = computed(() => nodesTree.nextDocument(node.value?.id));
+const previous = computed(() => nodesTree.prevDocument(node.value?.id));
 const width = computed(() => {
-  if (preferencesStore.get('docSize').value == 2) return '980px';
-  if (preferencesStore.get('docSize').value == 1) return '800px';
+  if (docSize.value == 2) return '980px';
+  if (docSize.value == 1) return '800px';
   return '700px';
 });
+
+// Context menu
+const contextMenu = useContextMenu();
+
+function showContextMenu(event: MouseEvent) {
+  contextMenu.open(shallowRef(NodeContextMenu), event, {
+    props: { contextMenu: true, node: node.value },
+  });
+}
 
 onMounted(() => {
   // Keyboard shortcuts management for navigating between corresponding pages
   const handleDocumentKeydown = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.key === 'e') {
       // Go to the edit page of the current document
-      if (!node.value?.id) return;
+      if (!node.value) return;
       e.preventDefault();
-      useRouter().push(`/dashboard/docs/edit/${node.value.id}`);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
+      router.push(`/dashboard/docs/edit/${node.value.id}`);
+    }
+    if (e.key === 'ArrowRight') {
       // Go to the next document page
+      e.preventDefault();
       if (!next.value?.id) return;
       e.preventDefault();
-      useRouter().push(`/dashboard/docs/${next.value.id}`);
-    } else if (e.key === 'ArrowLeft') {
+      router.push(`/dashboard/docs/${next.value.id}`);
+    }
+    if (e.key === 'ArrowLeft') {
       if (!previous.value?.id) return;
       e.preventDefault();
-      useRouter().push(`/dashboard/docs/${previous.value.id}`);
+      router.push(`/dashboard/docs/${previous.value.id}`);
+    }
+    if (e.key === 'Escape') {
+      // Close context menu on Escape
+      contextMenu.close();
+    }
+    if (e.key === 'Delete') {
+      // Open delete modal on Delete
+      if (!node.value) return;
+      e.preventDefault();
+      useModal().add(
+        new Modal(shallowRef(DeleteNodeModal), {
+          props: { node: node.value, redirectTo: '/dashboard' },
+          size: 'small',
+        }),
+      );
     }
   };
 

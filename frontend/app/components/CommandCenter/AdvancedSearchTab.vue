@@ -2,233 +2,249 @@
   <div class="advanced-search-tab">
     <div class="search-filters">
       <div class="filters-header">
-        <h3 class="filters-title">Advanced Filters</h3>
-        <button class="toggle-filters-btn" :class="{ collapsed: !showFilters }" @click="toggleFilters">
-          <Icon :name="showFilters ? 'collapse' : 'expand'" />
-        </button>
+        <h3 class="filters-title">{{ t('components.commandCenter.advanced.title') }}</h3>
+        <span class="filters-actions">
+          <button class="clear-filters-btn" @click="clearFilters">{{ t('components.commandCenter.advanced.clear') }}</button>
+          <button class="toggle-filters-btn" :class="{ collapsed: !showFilters }" @click="toggleFilters">
+            <Icon :name="showFilters ? 'collapse' : 'expand'" />
+          </button>
+        </span>
       </div>
 
       <div v-show="showFilters" class="filters-content">
-        <div class="filter-group">
-          <label class="filter-label">Date Range</label>
-          <div class="date-filters">
-            <div class="date-input">
-              <label>From</label>
-              <input v-model="dateFrom" type="date" class="date-picker" />
-            </div>
-            <div class="date-input">
-              <label>To</label>
-              <input v-model="dateTo" type="date" class="date-picker" />
-            </div>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Date Type</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input v-model="dateType" type="radio" value="created" />
-              <span>Created</span>
-            </label>
-            <label class="radio-option">
-              <input v-model="dateType" type="radio" value="modified" />
-              <span>Modified</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Tags</label>
-          <div class="tags-filter">
-            <div class="tags-input-wrapper">
-              <div class="tags-input">
-                <input
-                  v-model="tagInput"
-                  type="text"
-                  placeholder="Add tag filter..."
-                  class="tag-input"
-                  @keydown.enter="handleEnter"
-                  @keydown.arrow-up="tagHandleArrowUp"
-                  @keydown.arrow-down="tagHandleArrowDown"
-                  @keydown.escape="hideSuggestions"
-                  @input="handleTagInput"
-                  @focus="showSuggestions = true"
-                  @blur="hideSuggestions"
-                />
-                <button class="add-tag-btn" @click="addTag">
-                  <Icon name="plus" fill="#fff" />
-                </button>
+        <div class="filter-group full-width">
+          <label class="filter-label">{{ t('components.commandCenter.advanced.dateRange') }}</label>
+          <div class="date-row">
+            <div class="date-filters">
+              <div class="date-input">
+                <label>{{ t('components.commandCenter.advanced.from') }}</label>
+                <input v-model="dateFrom" type="date" class="date-picker" />
               </div>
-
-              <div v-if="showSuggestions && filteredTagSuggestions.length > 0" class="tag-suggestions">
-                <div
-                  v-for="(tag, index) in filteredTagSuggestions"
-                  :key="tag"
-                  class="tag-suggestion"
-                  :class="{ selected: selectedSuggestionIndex === index }"
-                  @mousedown="selectTag(tag)"
-                  @mouseenter="selectedSuggestionIndex = index"
-                >
-                  {{ tag }}
-                </div>
+              <div class="date-input">
+                <label>{{ t('components.commandCenter.advanced.to') }}</label>
+                <input v-model="dateTo" type="date" class="date-picker" />
               </div>
             </div>
-            <div class="selected-tags">
-              <span v-for="tag in selectedTags" :key="tag" class="tag-chip">
-                {{ tag }}
-                <button class="remove-tag" @click.stop="removeTag(tag)">
-                  <Icon name="close" class="no-close" />
-                </button>
-              </span>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input v-model="dateType" type="radio" value="created" />
+                <span>{{ t('components.commandCenter.advanced.created') }}</span>
+              </label>
+              <label class="radio-option">
+                <input v-model="dateType" type="radio" value="modified" />
+                <span>{{ t('components.commandCenter.advanced.modified') }}</span>
+              </label>
             </div>
           </div>
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Category</label>
-          <AppSelect v-model="selectedCategory" :items="categoriesTree" placeholder="Select a category" />
+          <label class="filter-label">{{ t('components.commandCenter.advanced.category') }}</label>
+          <AppSelect v-model="selectedCategory" :items="categoriesTree" nullable :placeholder="t('components.commandCenter.advanced.allCategories')" />
         </div>
 
-        <div class="filter-actions">
-          <button class="clear-filters-btn" @click="clearFilters">Clear Filters</button>
-          <button class="apply-filters-btn">Apply Filters</button>
+        <div class="filter-group">
+          <label class="filter-label">{{ t('components.commandCenter.advanced.tags') }}</label>
+          <AppTagInput v-model="selectedTags" @update:model-value="tagInput = $event" />
         </div>
+
+        <div class="filter-group full-width">
+          <label class="filter-label inline">
+            <AppCheck v-model="searchInContent" />
+            {{ t('components.commandCenter.advanced.searchInContent') }}
+          </label>
+          <p class="filter-hint">{{ t('components.commandCenter.advanced.searchInContentHint') }}</p>
+        </div>
+
+        <div class="filter-actions"></div>
       </div>
     </div>
 
     <div class="search-results">
-      <SearchResultsList
-        :items="flattenedItems"
-        :selected-index="selectedIndex"
-        :query="query"
-        empty-text="No documents match your filters"
-        empty-icon="search"
-        @update-selected-index="$emit('updateSelectedIndex', $event)"
-      />
+      <SearchResultsList :items="flattenedItems" :selected-index="selectedIndex" :query="query" @update-selected-index="$emit('updateSelectedIndex', $event)" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import SearchResultsList from './SearchResultsList.vue';
-import type { Node } from '~/stores';
-const props = defineProps<{
-  query: string;
-  selectedIndex: number;
-}>();
+import { resolveIcon } from '~/helpers/node';
+import type { Node, NodeSearchResult } from '~/stores';
+
+const props = defineProps<{ query: string; selectedIndex: number }>();
 
 defineEmits<{ updateSelectedIndex: [index: number] }>();
 
+const { t } = useI18nT();
+const nodesStore = useNodesStore();
+const nodesTree = useNodesTree();
+const categoriesTree = nodesTree.treeUpToRole(2);
+
+// UI State
+const showFilters = ref(true);
+
+// Search State
+const searchInContent = ref(true);
+const searchResults = ref<(NodeSearchResult | Node)[]>([]);
 const dateFrom = ref('');
 const dateTo = ref('');
 const dateType = ref<'created' | 'modified'>('modified');
 const tagInput = ref('');
-const selectedTags = ref<string[]>([]);
+const selectedTags = ref<string>('');
 const selectedCategory = ref('');
-const showFilters = ref(true);
-const showSuggestions = ref(false);
-const selectedSuggestionIndex = ref(0);
 
-const nodesStore = useNodesStore();
-const categoriesTree = new TreeStructure(useSidebarTree().nodes.value.filter(n => n.data.role <= 2)).generateTree();
+/**
+ * Global search function
+ * - If searchInContent is ON and query >= 2 chars → API fulltext search
+ * - Otherwise → local store search
+ */
 
-const filteredTagSuggestions = computed(() => {
-  if (!tagInput.value) return [];
-  const input = tagInput.value.toLowerCase();
-  return nodesStore.allTags.filter(tag => tag.toLowerCase().includes(input) && !selectedTags.value.includes(tag)).slice(0, 5);
-});
+async function searchAPI() {
+  try {
+    const apiResults = await nodesStore.searchFulltext(props.query, true, 30);
+    searchResults.value = applyFilters(apiResults);
+  } catch (error) {
+    console.error('[CommandCenter] Fulltext search error:', error);
+    searchResults.value = [];
+  }
+}
 
-const filteredDocuments = computed(() => {
-  return nodesStore.search({
+const searchAPIdebounced = useDebounceFn(() => searchAPI(), 300);
+
+async function localSearch() {
+  searchResults.value = nodesStore.search({
     query: props.query,
     category: selectedCategory.value,
     dateType: dateType.value,
     fromDate: dateFrom.value ? new Date(dateFrom.value) : undefined,
     toDate: dateTo.value ? new Date(dateTo.value) : undefined,
-    tags: selectedTags.value,
+    tags: selectedTags.value
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0),
+    role: 3,
   });
-});
+}
+
+/**
+ * Apply additional filters to API results (category, tags, dates)
+ */
+function applyFilters(results: (NodeSearchResult | Node)[]): (NodeSearchResult | Node)[] {
+  let filtered = [...results];
+
+  // Apply category filter
+  if (selectedCategory.value) {
+    filtered = filtered.filter(d => d.parent_id === selectedCategory.value);
+  }
+
+  // Apply tag filters
+  if (selectedTags.value.length) {
+    filtered = filtered.filter(d => {
+      if (!d.tags) return false;
+      const nodeTags = d.tags.split(',').map(t => t.trim());
+      return selectedTags.value
+        .split(',')
+        .map(t => t.trim())
+        .some(tag => nodeTags.includes(tag));
+    });
+  }
+
+  // Apply date filters
+  const fromDate = dateFrom.value ? new Date(dateFrom.value) : null;
+  const toDate = dateTo.value ? new Date(dateTo.value) : null;
+  if (fromDate || toDate) {
+    filtered = filtered.filter(d => {
+      const timestamp = dateType.value === 'created' ? d.created_timestamp : d.updated_timestamp;
+      const nodeDate = new Date(timestamp);
+      if (fromDate && nodeDate < fromDate) return false;
+      if (toDate && nodeDate > toDate) return false;
+    });
+  }
+
+  return filtered;
+}
+
+// Watch all search-related changes and trigger search
+watch(
+  [() => props.query, searchInContent, dateFrom, dateTo, dateType, selectedCategory, selectedTags],
+  () => {
+    if (props.query.length >= 2 && searchInContent.value) {
+      searchAPIdebounced();
+    } else {
+      localSearch();
+    }
+  },
+  { immediate: true, deep: true },
+);
 
 const flattenedItems = computed(() => {
-  return filteredDocuments.value.map((doc, idx) => ({
+  return searchResults.value.map((doc, idx) => ({
     id: doc.id,
-    icon: getDocumentIcon(doc),
+    icon: resolveIcon(doc),
     title: doc.name,
-    description: doc.tags ? `#${String(doc.tags.split(', ').join(' #'))}` : 'Document',
+    description: buildDescription(doc),
     path: `/dashboard/docs/${doc.id}`,
     section: '',
     globalIndex: idx,
   }));
 });
 
-function addTag() {
-  const tag = tagInput.value.trim();
-  if (tag && !selectedTags.value.includes(tag)) {
-    selectedTags.value.push(tag);
-    tagInput.value = '';
-    showSuggestions.value = false;
+function buildDescription(doc: NodeSearchResult | Node): string {
+  // If we have a content snippet from fulltext search, show it
+  if ('content_snippet' in doc && doc.content_snippet) {
+    // Clean up HTML tags and show snippet
+    if (doc.content_snippet) {
+      // No injection risk as content_snippet is generated by the backend and it's self provited content
+      return `...${highlightMatches(doc.content_snippet)}...`;
+    }
   }
-}
-
-function selectTag(tag?: string) {
-  if (!tag) return;
-  selectedTags.value.push(tag);
-  tagInput.value = '';
-  showSuggestions.value = false;
-}
-
-function handleTagInput() {
-  selectedSuggestionIndex.value = 0;
-  showSuggestions.value = filteredTagSuggestions.value.length > 0;
-}
-
-function hideSuggestions() {
-  setTimeout(() => {
-    showSuggestions.value = false;
-  }, 200);
-}
-
-function handleEnter(event: KeyboardEvent) {
-  event.preventDefault();
-  if (showSuggestions.value && filteredTagSuggestions.value.length > 0) {
-    selectTag(filteredTagSuggestions.value[selectedSuggestionIndex.value]);
-  } else {
-    addTag();
+  // Fallback to tags
+  if (doc.tags) {
+    return `#${String(
+      doc.tags
+        .split(',')
+        .map(t => t.trim())
+        .join(' #'),
+    )}`;
   }
+  return 'Document';
 }
 
-function tagHandleArrowUp(event: KeyboardEvent) {
-  event.preventDefault();
-  if (showSuggestions.value && filteredTagSuggestions.value.length > 0) {
-    selectedSuggestionIndex.value = selectedSuggestionIndex.value > 0 ? selectedSuggestionIndex.value - 1 : filteredTagSuggestions.value.length - 1;
-  }
+/**
+ * Highlight matching words in text by wrapping them in <b> tags
+ */
+function highlightMatches(text: string): string {
+  if (!props.query || props.query.length < 2) return escapeHtml(text);
+
+  const words = props.query
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length >= 2);
+  if (words.length === 0) return escapeHtml(text);
+
+  // Escape special regex chars and create pattern
+  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const regex = new RegExp(`(${pattern})`, 'gi');
+
+  return escapeHtml(text).replace(regex, '<b>$1</b>');
 }
 
-function tagHandleArrowDown(event: KeyboardEvent) {
-  event.preventDefault();
-  if (showSuggestions.value && filteredTagSuggestions.value.length > 0) {
-    selectedSuggestionIndex.value = selectedSuggestionIndex.value < filteredTagSuggestions.value.length - 1 ? selectedSuggestionIndex.value + 1 : 0;
-  }
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function toggleFilters() {
   showFilters.value = !showFilters.value;
 }
 
-function removeTag(tag: string) {
-  selectedTags.value = selectedTags.value.filter(t => t !== tag);
-}
-
 function clearFilters() {
+  selectedTags.value = '';
+  tagInput.value = '';
+  selectedCategory.value = '';
   dateFrom.value = '';
   dateTo.value = '';
-  selectedTags.value = [];
-  selectedCategory.value = '';
-}
-
-function getDocumentIcon(doc: Node) {
-  if (doc.order == -1) return 'pin';
-  return 'files';
+  dateType.value = 'modified';
+  searchInContent.value = true;
 }
 
 defineExpose({ flattenedItems });
@@ -242,39 +258,44 @@ defineExpose({ flattenedItems });
 }
 
 .search-filters {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .filters-header {
   display: flex;
-  padding: 16px 20px;
+  padding: 10px 16px;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   justify-content: space-between;
 }
 
 .filters-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 11px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+.filters-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toggle-filters-btn {
   display: flex;
   padding: 4px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
-  transition: transform 0.2s ease;
+  transition: transform $transition-fast ease;
   align-items: center;
   cursor: pointer;
   justify-content: center;
 
   &:hover {
-    background: var(--border-color);
+    background: var(--border);
   }
 
   &.collapsed {
@@ -283,29 +304,35 @@ defineExpose({ flattenedItems });
 }
 
 .filters-content {
-  padding: 20px;
+  display: grid;
+  padding: 12px 16px;
+  gap: 12px 16px;
+  grid-template-columns: 1fr 1fr;
 }
 
 .filter-group {
-  margin-bottom: 20px;
-
-  &:last-child {
-    margin-bottom: 0;
+  &.full-width {
+    grid-column: 1 / -1;
   }
 }
 
 .filter-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
   text-transform: uppercase;
+}
+
+.inline {
+  display: flex;
+  align-items: center;
 }
 
 .date-filters {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .date-input {
@@ -313,18 +340,15 @@ defineExpose({ flattenedItems });
 
   label {
     display: block;
-    font-size: 11px;
-    margin-bottom: 4px;
+    font-size: 10px;
+    opacity: 0.6;
+    margin-bottom: 2px;
   }
 }
 
 .date-picker {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 14px;
-  background: var(--bg-color);
+  background: var(--surface-base);
   outline: none;
 
   &:focus {
@@ -334,161 +358,41 @@ defineExpose({ flattenedItems });
 
 .radio-group {
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 
 .radio-option {
   display: flex;
-  font-size: 14px;
+  font-size: 13px;
   align-items: center;
   cursor: pointer;
-  gap: 6px;
+  gap: 4px;
 
   input[type='radio'] {
     accent-color: var(--primary);
   }
 }
 
-.tags-filter {
-  .tags-input-wrapper {
-    position: relative;
-    margin-bottom: 12px;
-  }
-
-  .tags-input {
-    display: flex;
-    gap: 8px;
-  }
-
-  .tag-input {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg-color);
-    flex: 1;
-    outline: none;
-
-    &:focus {
-      border-color: var(--primary);
-    }
-  }
-
-  .add-tag-btn {
-    display: flex;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    color: white;
-    background: var(--primary);
-    transition: background-color 0.2s ease;
-    align-items: center;
-    cursor: pointer;
-    justify-content: center;
-
-    &:hover {
-      background: var(--primary-dark);
-    }
-  }
-}
-
-.tag-suggestions {
-  top: 100%;
-  right: 48px;
-  left: 0;
-  z-index: 10;
-  max-height: 200px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-color);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-  overflow-y: auto;
-}
-
-.tag-suggestion {
-  padding: 8px 12px;
-  font-size: 14px;
-  transition: background 0.2s ease;
-  cursor: pointer;
-
-  &:hover,
-  &.selected {
-    background: var(--border-color);
-  }
-
-  &:first-child {
-    border-radius: 6px 6px 0 0;
-  }
-
-  &:last-child {
-    border-radius: 0 0 6px 6px;
-  }
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag-chip {
-  display: inline-flex;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  background: var(--border-color);
-  align-items: center;
-  gap: 4px;
-
-  .remove-tag {
-    display: flex;
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: none;
-    align-items: center;
-    cursor: pointer;
-    justify-content: center;
-
-    &:hover {
-      color: white;
-    }
-  }
-}
-
 .filter-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.clear-filters-btn,
-.apply-filters-btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  flex: 1;
+  gap: 8px;
+  grid-column: 1 / -1;
 }
 
 .clear-filters-btn {
-  background: var(--border-color);
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.clear-filters-btn {
+  background: var(--border);
 
   &:hover {
     background: var(--selection-color);
-  }
-}
-
-.apply-filters-btn {
-  color: white;
-  background: var(--primary);
-
-  &:hover {
-    background: var(--primary-dark);
   }
 }
 
@@ -499,12 +403,9 @@ defineExpose({ flattenedItems });
   overscroll-behavior: contain;
 }
 
-.tag {
-  padding: 2px 6px;
-  border-radius: 4px;
+.filter-hint {
+  margin: 2px 0 0;
   font-size: 10px;
-  font-weight: 500;
-  color: white;
-  background: var(--primary);
+  color: var(--text-secondary);
 }
 </style>

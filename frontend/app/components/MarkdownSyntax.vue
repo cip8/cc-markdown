@@ -1,29 +1,31 @@
 <template>
   <div class="markdown-guide">
     <div class="content">
-      <h1><IconApp style="width: 60px" /> Alexandrie Markdown Syntax Guide</h1>
-      <p style="margin: 0">This guide shows you how to use Alexandrie’s extended Markdown features to create expressive and organized notes.</p>
+      <h1><IconApp style="width: 60px" /> {{ t('markdown.syntax.title') }}</h1>
+      <p style="margin: 0">{{ t('markdown.syntax.subtitle') }}</p>
 
       <!-- BASIC FORMATTING -->
-      <h2><Icon name="edit" fill="var(--primary)" /> Basic Formatting</h2>
+      <h2><Icon name="edit" fill="var(--primary)" /> {{ t('markdown.syntax.basicFormatting') }}</h2>
       <ul>
         <li><strong>Bold</strong>: <code>**bold**</code> or <code>__bold__</code></li>
         <li><em>Italic</em>: <code>*italic*</code> or <code>_italic_</code></li>
-        <li><u>Underline</u>: <code>_underline_</code></li>
+        <li><u>Underline</u>: <code>__underline__</code></li>
         <li><del>Strikethrough</del>: <code>~~strikethrough~~</code></li>
         <li><mark>Highlight</mark>: <code>==highlight==</code></li>
+        <li>Superscript: <sup>text</sup> <code>^text^</code></li>
+        <li>Subscript: <sub>text</sub> <code>~text~</code></li>
       </ul>
 
       <!-- TAGS -->
       <p>
-        <strong>Tags: </strong> <tag blue>Blue</tag> <tag green>Green</tag> <tag red>Red</tag> <tag yellow>Yellow</tag> <tag grey>Grey</tag> <tag teal>Teal</tag
-        ><br />
+        <strong>{{ t('markdown.syntax.tags') }}: </strong> <tag blue>Blue</tag> <tag green>Green</tag> <tag red>Red</tag> <tag orange>Yellow</tag>
+        <tag grey>Grey</tag> <tag teal>Teal</tag><br />
         Syntax: <code v-text="`<tag 'color'>Content</tag>`"></code> — example: <code v-text="`<tag blue>Blue</tag>`"></code>
       </p>
 
       <!-- COLORS -->
       <p>
-        <strong>Colors: </strong>
+        <strong>{{ t('markdown.syntax.colors') }}: </strong>
         <strong>
           <span style="color: var(--blue)">blue</span> ; <span style="color: var(--red)">red</span> ; <span style="color: var(--green)">green</span> ;
           <span style="color: var(--yellow)">yellow</span> ; <span style="color: var(--primary)">primary</span> ;
@@ -34,17 +36,17 @@
       </p>
 
       <p>
-        <strong>Titles:</strong>
+        <strong>{{ t('markdown.syntax.titles') }}:</strong>
         Syntax: <code v-text="`# H1`"></code> → <code v-text="`###### H6`"></code>
       </p>
 
       <p>
-        <strong>Links & Images:</strong>
+        <strong>{{ t('markdown.syntax.linksAndImages') }}:</strong>
         Use <code>[links](https://example.com)</code> and <code>![images](image.png)</code>.
       </p>
 
       <!-- COLORED BLOCKS -->
-      <h2><Icon name="layers" fill="var(--primary)" /> Colored Blocks</h2>
+      <h2><Icon name="layers" fill="var(--primary)" /> {{ t('markdown.syntax.coloredBlocks') }}</h2>
       <p>Use colored blocks with the syntax <code>:::color TITLE</code>.</p>
       <div class="block-grid">
         <div class="custom-block blue">
@@ -74,7 +76,7 @@
       </div>
 
       <!-- ADVANCED BLOCKS -->
-      <h2><Icon name="layers" fill="var(--primary)" /> Advanced Blocks</h2>
+      <h2><Icon name="layers" fill="var(--primary)" /> {{ t('markdown.syntax.advancedBlocks') }}</h2>
       <p>Use info blocks with the syntax <code>:::name TITLE Content :::</code>.</p>
 
       <div class="block-grid">
@@ -129,16 +131,83 @@
         </details>
       </div>
 
+      <h2><Icon name="layers" fill="var(--primary)" /> {{ t('markdown.syntax.cardsAndPanels') }}</h2>
+      <p>
+        Use powerful block containers with a simplified syntax and <strong>modifiers</strong>. You can style your blocks using attributes like
+        <code>border</code>, <code>rounded</code>, <code>bordered</code>, <code>shadow</code>, and even a custom <code>title="..."</code>.
+      </p>
+      <p>
+        Syntax:
+        <code>:::block-name modifier=value another-modifier title="Your Title"</code>
+      </p>
+
+      <h3>Available block types:</h3>
+      <ul>
+        <li><code>:::frame</code> — general purpose framed block</li>
+        <li><code>:::card</code> — card-like container</li>
+        <li><code>:::panel</code> — side panel / auxiliary container</li>
+      </ul>
+
+      <h3>Available modifiers:</h3>
+      <ul>
+        <li><strong>border=red|blue|green|yellow|teal|primary|grey|pink|purple…</strong></li>
+        <li><strong>rounded</strong> — adds strong border radius</li>
+        <li><strong>shadow</strong> — soft drop shadow</li>
+        <li><strong>bordered</strong> — stronger border</li>
+        <li><strong>gap=sm|md|lg</strong> — internal spacing</li>
+        <li><strong>title="Your Title"</strong> — custom header</li>
+      </ul>
+
+      <div class="demo">
+        <pre>
+:::frame border=red title="Important"
+This is a framed block with a custom color and rounded edges.
+:::</pre
+        >
+
+        <div class="block frame border-red">
+          <div class="block-title">Important</div>
+          <p style="margin: 0">This is a framed block with a custom color and rounded edges.</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <pre>
+:::card shadow bordered title="Card Example"
+Cards can be styled with multiple modifiers at once.
+:::</pre
+        >
+
+        <div class="block card shadow bordered">
+          <div class="block-title">Card Example</div>
+          <p>Cards can be styled with multiple modifiers at once.</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <pre>
+:::panel gap=md title="Panel"
+Useful for side content or notes.
+:::</pre
+        >
+
+        <div class="block panel gap-md">
+          <div class="block-title">Panel</div>
+          <p>Useful for side content or notes.</p>
+        </div>
+      </div>
+
       <!-- MATH -->
-      <h2><Icon name="maths" fill="var(--primary)" /> Math Syntax</h2>
+      <h2><Icon name="maths" fill="var(--primary)" /> {{ t('markdown.syntax.mathSyntax') }}</h2>
       <p>Use KaTeX for math expressions: <code>$...$</code> (inline) or <code>$$...$$</code> (block).</p>
       <div class="demo">
         <pre>$\int_{-\infty}^{+\infty} e^{-x^2} dx = \sqrt{\pi}$</pre>
+        <!-- eslint-disable-next-line vue/no-v-html  OK fixed value -->
         <p v-html="compile('$$\\int_{-\\infty}^{+\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$')"></p>
       </div>
 
       <!-- EXTENDED SYNTAX -->
-      <h2><Icon name="import" fill="var(--primary)" /> Extended Syntax</h2>
+      <h2><Icon name="import" fill="var(--primary)" /> {{ t('markdown.syntax.extendedSyntax') }}</h2>
       <ul>
         <li><strong>Code blocks:</strong> <code>```language ... ```</code></li>
         <li><strong>Blockquotes:</strong> <code>> Quoted text</code></li>
@@ -148,7 +217,7 @@
         <li><strong>Task lists:</strong> <code>- [ ] Todo</code>, <code>- [x] Done</code></li>
         <li>
           <strong>Tables:</strong><br />
-          <pre style="padding: 0.75rem; border-radius: 6px; color: white; overflow-x: auto; margin: 10px 0">
+          <pre style="margin: 10px 0; padding: 0.75rem; border-radius: var(--radius-sm); color: white; overflow-x: auto">
 | Column 1 | Column 2 |
 |-----------|-----------|
 | Cell 1    | Cell 2    |</pre
@@ -157,82 +226,118 @@
         <li><strong>Footnotes:</strong> <code>Text[^1]</code> with <code>[^1]: footnote text</code></li>
         <li><strong>Inline HTML:</strong> <code>&lt;span style="color:red"&gt;text&lt;/span&gt;</code></li>
       </ul>
+
+      <!-- FOOTNOTES -->
+      <h2><Icon name="format/footnote" fill="var(--primary)" /> {{ t('markdown.syntax.footnotes') }}</h2>
+      <p>Add footnotes to your text for references or additional information.</p>
+      <div class="demo">
+        <pre>
+This is a text with a note[^1] and another[^ref].
+
+[^1]: First footnote
+[^ref]: Second footnote with text identifier</pre
+        >
+        <div>
+          <p>
+            This is a text with a note<sup class="footnote-ref"><a href="#fn-1" title="First footnote">[1]</a></sup> and another<sup class="footnote-ref"
+              ><a href="#fn-ref" title="Second footnote with text identifier">[ref]</a></sup
+            >.
+          </p>
+          <section class="footnotes" style="font-size: 0.9rem; border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 0.5rem">
+            <ol style="margin: 0; padding-left: 1.5rem">
+              <li>First footnote <a href="#fnref-1" class="footnote-backref">↩</a></li>
+              <li>Second footnote with text identifier <a href="#fnref-ref" class="footnote-backref">↩</a></li>
+            </ol>
+          </section>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import compile from '~/helpers/markdown';
+
+const { t } = useI18nT();
 </script>
 
 <style scoped lang="scss">
 .markdown-guide {
-  line-height: 1.7;
+  max-width: 100%;
   margin: auto;
+  line-height: 1.7;
 }
+
 .content {
   margin: 1rem 0.5rem;
 }
+
 h1 {
   display: flex;
-  align-items: center;
   margin: 0;
+  align-items: center;
 }
+
 h2 {
   display: flex;
+  font-size: 1.3rem;
+  color: var(--primary);
   align-items: center;
   gap: 0.5rem;
   margin-top: 2rem;
-  font-size: 1.3rem;
-  color: var(--primary);
 }
+
 code {
   padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace;
+  border-radius: var(--radius-xs);
+  font-family: $font-mono;
   font-size: 0.8rem;
 }
+
 .demo {
   display: flex;
   width: 100%;
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
+
   pre {
+    margin: 10px 0;
     padding: 0.75rem;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: white;
     overflow-x: auto;
-    margin: 10px 0;
   }
+
   * {
     flex: 1;
   }
 }
+
 .custom-block pre {
-  background: rgba(255, 255, 255, 0.3);
-  margin-top: 0.5rem;
   padding: 0.5rem;
-  border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-family: $font-mono;
   font-size: 0.85rem;
-}
-.block-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-.external-link {
-  color: var(--primary);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  background: rgb(255 255 255 / 30%);
+  margin-top: 0.5rem;
 }
 
-@media screen and (max-width: 800px) {
+.block-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media screen and (width <= 800px) {
+  .content {
+    margin: 0.75rem 0.25rem;
+  }
+
   .block-grid {
     grid-template-columns: 1fr;
   }
+
   .demo {
     flex-direction: column;
   }

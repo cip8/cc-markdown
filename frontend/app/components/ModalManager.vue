@@ -12,7 +12,7 @@
           v-bind="modal.options.props"
           class="modal"
           :class="modal.options.size"
-          @close="modalManager.close(modal)"
+          @close="() => modalManager.close(modal)"
         />
       </div>
     </div>
@@ -21,14 +21,26 @@
 
 <script setup lang="ts">
 const modalManager = useModal();
+
 const modals = modalManager.modals;
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && modals.value.length > 0) {
+    modalManager.closeLast();
+  }
+};
+
+onMounted(() => document.addEventListener('keydown', handleKeydown));
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown));
 </script>
 
 <style scoped lang="scss">
 /* Transition group classes */
 .modal-enter-active,
 .modal-leave-active {
-  transition: all 0.3s ease;
+  transition:
+    opacity $transition-medium ease,
+    transform $transition-medium ease;
 }
 
 .modal-enter-from,
@@ -43,10 +55,12 @@ const modals = modalManager.modals;
   width: 90%;
   max-width: 750px;
   margin: auto;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   font-size: initial;
-  background-color: var(--bg-color);
-  box-shadow: 0 2px 10px var(--shadow);
+  background-color: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
+  -webkit-backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
 }
 
 .modal-container:has(> .large) {
@@ -60,8 +74,8 @@ const modals = modalManager.modals;
 .modal-overlay {
   position: absolute;
   z-index: 1;
-  border-radius: 10px;
-  background-color: rgb(0 0 0 / 20%);
+  border-radius: var(--radius-lg);
+  background-color: var(--overlay-light);
   inset: 0;
   pointer-events: none;
 }
@@ -75,14 +89,40 @@ const modals = modalManager.modals;
 }
 
 .modal {
-  border-radius: 8px;
-  background-color: var(--bg-color);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-base);
 }
 
 .modal-mask {
   position: fixed;
   display: flex;
-  background-color: rgb(0 0 0 / 50%);
+  background-color: var(--overlay-backdrop);
+  backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
+  -webkit-backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
   inset: 0;
+}
+
+.modal-pos {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+@media screen and (width <= 600px) {
+  .modal-container {
+    display: flex;
+    width: 95%;
+    padding: 12px 0;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .close-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
 }
 </style>

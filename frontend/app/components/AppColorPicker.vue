@@ -3,8 +3,8 @@
     <div
       v-if="nullable"
       class="color-option"
-      style="border: 1px solid var(--border-color); background-color: white"
-      :style="{ outline: modelValue == -1 ? '2px solid var(--font-color-light)' : '' }"
+      style="border: 1px solid var(--border); background-color: white"
+      :style="{ outline: modelValue == -1 ? '2px solid var(--text-secondary)' : '' }"
       :class="{ selected: modelValue === -1 }"
       @click="selectColor(-1)"
     >
@@ -14,8 +14,8 @@
     </div>
     <div
       class="color-option"
-      style="background-color: var(--default)"
-      :style="{ outline: modelValue == -2 ? '2px solid var(--default)' : '' }"
+      style="background-color: var(--accent)"
+      :style="{ outline: modelValue == -2 ? '2px solid var(--accent)' : '' }"
       :class="{ selected: modelValue === -2 }"
       @click="selectColor(-2)"
     >
@@ -28,15 +28,15 @@
       :key="index"
       class="color-option"
       :style="{
-        backgroundColor: getAppColor(index) ? `var(--${getAppColor(index)})` : '#fff',
-        outline: modelValue === index ? `2px solid var(--${getAppColor(index)})` : 'none',
+        backgroundColor: getAppAccent(index) ? `var(--${getAppAccent(index)})` : '#fff',
+        outline: modelValue === index ? `2px solid var(--${getAppAccent(index)})` : 'none',
       }"
       :class="{ selected: modelValue === index }"
       @click="selectColor(index)"
     >
       <div class="hint-wrapper">
         <p class="hint-tooltip">
-          {{ getAppColor(index) }}
+          {{ getAppAccent(index) }}
         </p>
       </div>
     </div>
@@ -44,6 +44,10 @@
 </template>
 
 <script setup lang="ts">
+import { appColors } from '~/helpers/constants';
+
+const { getAppAccent } = useAppColors();
+
 const props = defineProps<{ modelValue?: number; nullable?: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', color: number): void }>();
 
@@ -59,7 +63,7 @@ function selectColor(color: number) {
 .color-picker {
   display: flex;
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -67,7 +71,7 @@ function selectColor(color: number) {
 .color-option {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 

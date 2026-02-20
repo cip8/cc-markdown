@@ -1,8 +1,8 @@
 <template>
   <div>
     <div v-if="items.length === 0" class="no-results">
-      <Icon :name="emptyIcon" class="no-results-icon" />
-      <p>No results found for "{{ query }}"</p>
+      <Icon name="search" class="no-results-icon" />
+      <p>{{ t('components.commandCenter.noResults', { query }) }}</p>
     </div>
     <div v-else class="search-results-list">
       <div v-for="(group, section) in groupedItems" :key="section" class="section">
@@ -13,12 +13,14 @@
           class="search-result-item"
           :to="item.path"
           :class="{ selected: selectedIndex === item.globalIndex }"
+          @click="close"
           @mouseenter="$emit('updateSelectedIndex', item.globalIndex)"
         >
           <Icon :name="item.icon" class="result-icon" />
           <div class="result-content">
             <span class="result-title">{{ item.title }}</span>
-            <span class="result-description">{{ item.description }}</span>
+            <!-- eslint-disable-next-line vue/no-v-html OK because app format -->
+            <span class="result-description" v-html="item.description"></span>
           </div>
           <div class="result-shortcut">
             <kbd v-if="item.shortcut">{{ item.shortcut }}</kbd>
@@ -32,22 +34,21 @@
 
 <script setup lang="ts">
 import type { ItemCommand } from './types';
-const props = defineProps<{
-  items: ItemCommand[];
-  selectedIndex: number;
-  query: string;
-  emptyIcon: string;
-}>();
 
-defineEmits<{
-  updateSelectedIndex: [index: number];
-}>();
+const props = defineProps<{ items: ItemCommand[]; selectedIndex: number; query: string }>();
+defineEmits<{ updateSelectedIndex: [index: number] }>();
+
+const { t } = useI18nT();
+const { close } = useCommandCenter();
 
 const groupedItems = computed(() => {
-  return props.items.reduce((acc, item) => {
-    (acc[item.section || ''] ||= []).push(item);
-    return acc;
-  }, {} as Record<string, typeof props.items>);
+  return props.items.reduce(
+    (acc, item) => {
+      (acc[item.section || ''] ||= []).push(item);
+      return acc;
+    },
+    {} as Record<string, typeof props.items>,
+  );
 });
 </script>
 
@@ -62,7 +63,7 @@ const groupedItems = computed(() => {
   display: flex;
   margin: 0 5px;
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: inherit;
   align-items: center;
   cursor: pointer;
@@ -71,20 +72,8 @@ const groupedItems = computed(() => {
 
   &:hover,
   &.selected {
-    background: var(--border-color);
+    background: var(--border);
   }
-}
-
-kbd {
-  display: inline-block;
-  padding: 4px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-family: Inter;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--font-color-dark);
-  background-color: var(--bg-color);
 }
 
 .result-icon {
@@ -109,7 +98,8 @@ kbd {
 }
 
 .result-title {
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -138,7 +128,7 @@ kbd {
   z-index: 1;
   padding: 6px 20px;
   font-size: 12px;
-  background: var(--bg-color);
+  background: var(--surface-base);
   text-transform: uppercase;
 }
 

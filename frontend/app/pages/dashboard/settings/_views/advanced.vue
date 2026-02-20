@@ -1,27 +1,34 @@
 <template>
   <div>
-    <h2 class="ctitle">Advanced</h2>
-    <p class="csubtitle">Manage advanced settings for the application.</p>
-    <p>Be careful with these settings, they can seriously affect the application.</p>
+    <h2 class="page-title">{{ t('settings.advanced.title') }}</h2>
+    <p class="page-subtitle">{{ t('settings.advanced.subtitle') }}</p>
 
-    <div class="settings-section">
-      <div class="setting">
-        <h4>Reset all preferences</h4>
-        <p>This will reset all your preferences to their default values. This action cannot be undone.</p>
-        <AppButton type="danger" @click="usePreferences().reset">Reset preferences</AppButton>
-      </div>
-      <div class="setting">
-        <h4>Reset local storage</h4>
-        <p>This will reset all your local storage data. This action cannot be undone. This action will also reset preferences.</p>
-        <AppButton type="danger" @click="deleteLocalStorage">Delete local storage</AppButton>
-      </div>
+    <div>
+      <h3>{{ t('settings.advanced.resetPreferences') }}</h3>
+      <p>{{ t('settings.advanced.resetPreferencesDesc') }}</p>
+      <AppButton type="danger" @click="preferences.reset">{{ t('settings.advanced.resetPreferencesBtn') }}</AppButton>
+    </div>
+    <div>
+      <h3>{{ t('settings.advanced.resetLocalStorage') }}</h3>
+      <p>{{ t('settings.advanced.resetLocalStorageDesc') }}</p>
+      <AppButton type="danger" @click="deleteLocalStorage">{{ t('settings.advanced.resetLocalStorageBtn') }}</AppButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+const preferences = usePreferencesStore();
+const { t } = useI18nT();
+
 const deleteLocalStorage = () => {
   localStorage.clear();
   location.reload();
 };
 </script>
+
+<style scoped lang="scss">
+h3 {
+  margin: 3rem 0 0.5rem;
+  font-weight: 500;
+}
+</style>

@@ -16,7 +16,7 @@
     <NuxtLink to="/dashboard/import">
       <Icon name="import" display="lg" />
     </NuxtLink>
-    <NuxtLink v-if="useUserStore().user?.role === 2" to="/dashboard/admin">
+    <NuxtLink v-if="userStore.user?.role === 2" to="/dashboard/admin">
       <Icon name="users" display="lg" />
     </NuxtLink>
     <div style="margin-top: auto">
@@ -32,11 +32,14 @@
 
 <script setup lang="ts">
 import SettingsModal from '~/pages/dashboard/settings/modal.vue';
+
+const userStore = useUserStore();
+
 const openSettings = () => {
   useModal().add(new Modal(shallowRef(SettingsModal), { props: {}, size: 'large', noPadding: true }));
 };
 function closeDock() {
-  usePreferences().set('view_dock', false);
+  usePreferencesStore().set('view_dock', false);
 }
 </script>
 
@@ -44,7 +47,8 @@ function closeDock() {
 .dock {
   display: flex;
   padding: 1rem 0.3rem;
-  border-right: 1px solid var(--border-color);
+  background-color: var(--surface-base);
+  border-right: 1px solid var(--border);
   flex-direction: column;
   gap: 10px;
 }
@@ -53,14 +57,14 @@ a {
   display: flex;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
+  border-radius: var(--radius-md);
+  transition: background-color $transition-medium ease;
   align-items: center;
   justify-content: center;
 
   &:hover {
     svg {
-      color: var(--opposite-color) !important;
+      color: var(--text-inverse) !important;
     }
   }
 }

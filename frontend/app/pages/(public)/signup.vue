@@ -6,17 +6,17 @@
       <h1>Account creation</h1>
       <form @submit.prevent="register">
         <div class="form-group">
-          <label for="username">Username</label>
+          <label for="username">Username <span class="required">*</span></label>
           <input id="username" v-model="username" type="text" :class="{ 'is-invalid': errors.username }" />
           <p v-if="errors.username" class="invalid-feedback">{{ errors.username }}</p>
         </div>
         <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" v-model="email" type="email" :class="{ 'is-invalid': errors.email }" />
-          <p v-if="errors.email" class="invalid-feedback">{{ errors.email }}</p>
+          <label for="email">Email </label>
+          <input id="email" v-model="email" type="email" />
+          <small>Email is only used for account recovery. It will not be shared publicly.</small>
         </div>
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password">Password <span class="required">*</span></label>
           <div class="password-input">
             <input
               id="password"
@@ -35,7 +35,7 @@
           <p v-if="errors.password" class="invalid-feedback">{{ errors.password }}</p>
         </div>
         <div class="form-group">
-          <label for="confirmPassword">Confirm Password</label>
+          <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
           <div class="password-input">
             <input
               id="confirmPassword"
@@ -67,69 +67,51 @@ import AppHeader from './_components/AppHeader.vue';
 import AppFooter from './_components/AppFooter.vue';
 
 const router = useRouter();
+const userStore = useUserStore();
+
+definePageMeta({
+  middleware: [
+    function redirectSignupDisabled() {
+      const config = useRuntimeConfig();
+      if (config.public.configDisableSignupPage) {
+        return navigateTo('/login');
+      }
+    },
+  ],
+});
+
+// Form fields
 const username = ref('');
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
-const showPassword = ref(false);
-const showConfirmPassword = ref(false);
-const errors = ref({
-  username: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-  general: '',
-});
-const userStore = useUserStore();
+const errors = ref({ username: '', password: '', confirmPassword: '', general: '' });
 
-function togglePassword() {
-  showPassword.value = !showPassword.value;
-}
-
-function toggleConfirmPassword() {
-  showConfirmPassword.value = !showConfirmPassword.value;
-}
+// Reusable password visibility toggles
+const { showPassword, togglePassword } = usePasswordField();
+const { showPassword: showConfirmPassword, togglePassword: toggleConfirmPassword } = usePasswordField();
 
 function register() {
-  let valid = true;
+  // Validate all fields
+  errors.value.username = !username.value ? 'Username is required' : '';
+  errors.value.password = !password.value ? 'Password is required' : '';
+  errors.value.confirmPassword = !confirmPassword.value
+    ? 'Password confirmation is required'
+    : password.value !== confirmPassword.value
+      ? 'Passwords do not match'
+      : '';
 
-  if (!username.value) {
-    errors.value.username = 'Username is required';
-    valid = false;
-  } else {
-    errors.value.username = '';
-  }
-
-  if (!email.value) {
-    errors.value.email = 'Email is required';
-    valid = false;
-  } else {
-    errors.value.email = '';
-  }
-
-  if (!password.value) {
-    errors.value.password = 'Password is required';
-    valid = false;
-  } else {
-    errors.value.password = '';
-  }
-
-  if (!confirmPassword.value) {
-    errors.value.confirmPassword = 'Password confirmation is required';
-    valid = false;
-  } else if (password.value !== confirmPassword.value) {
-    errors.value.confirmPassword = 'Passwords do not match';
-    valid = false;
-  } else {
-    errors.value.confirmPassword = '';
-  }
-
+  const valid = !Object.values(errors.value).some(e => e);
   if (valid) createAccount(username.value, email.value, password.value);
 }
 
+watch([username, email, password, confirmPassword], () => {
+  errors.value.general = '';
+});
+
 async function createAccount(username: string, email: string, password: string) {
   userStore
-    .register({ username, email, password, role: 1 })
+    .register({ username, email: email || undefined, password, role: 1 })
     .then(() => {
       router.push('/login');
     })
@@ -143,7 +125,6 @@ async function createAccount(username: string, email: string, password: string) 
 .container {
   display: flex;
   width: 95%;
-  height: 100%;
   margin: 0 auto;
   flex-direction: column;
   justify-content: space-between;
@@ -154,7 +135,7 @@ async function createAccount(username: string, email: string, password: string) 
   display: flex;
   width: 100%;
   max-width: 600px;
-  margin: 0 auto 10%;
+  margin: 0 auto;
   align-items: center;
   flex-direction: column;
   justify-content: center;
@@ -164,7 +145,7 @@ h1 {
   font-size: 2.5em;
 }
 
-/* ===== Formulaire ===== */
+/* ===== Form ===== */
 form {
   width: 100%;
 }
@@ -185,11 +166,13 @@ form {
 input {
   width: 100%;
   padding: 0.6rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
   font-size: 1rem;
-  background: var(--bg-color);
-  transition: all 0.2s ease;
+  background: var(--surface-base);
+  transition:
+    border-color $transition-fast ease,
+    box-shadow $transition-fast ease;
 
   &:focus {
     border-color: var(--primary);
@@ -198,7 +181,12 @@ input {
   }
 }
 
-/* ===== Mot de passe ===== */
+.required {
+  font-size: larger;
+  color: var(--red);
+}
+
+/* ===== Password ===== */
 .password-input {
   position: relative;
 }
@@ -212,14 +200,16 @@ input {
   border: none;
   border-radius: 50%;
   background: transparent;
-  transition: all 0.2s ease;
+  transition:
+    background-color $transition-fast ease,
+    transform $transition-fast ease;
   align-items: center;
   cursor: pointer;
   justify-content: center;
   transform: translateY(-50%);
 
   &:hover {
-    background: rgb(0 0 0 / 5%);
+    background: var(--surface-transparent);
   }
 
   &:active {
@@ -231,7 +221,7 @@ input {
   display: flex;
   width: 20px;
   height: 20px;
-  transition: all 0.3s ease;
+  transition: transform $transition-medium ease;
   align-items: center;
   justify-content: center;
 
@@ -242,18 +232,18 @@ input {
   svg {
     width: 18px;
     height: 18px;
-    transition: all 0.3s ease;
+    transition: transform $transition-medium ease;
   }
 }
 
-/* ===== Liens ===== */
+/* ===== Links ===== */
 .login-link {
   display: block;
   margin: 1.5rem 0;
   font-weight: 500;
   color: var(--primary);
   text-align: center;
-  transition: all 0.2s ease;
+  transition: color $transition-fast ease;
   text-decoration: none;
 
   &:hover {
@@ -262,17 +252,20 @@ input {
   }
 }
 
-/* ===== Boutons ===== */
+/* ===== Buttons ===== */
 .btn {
   width: 100%;
   padding: 0.9rem;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 1.1rem;
   font-weight: 600;
   color: white;
   background-color: var(--primary);
-  transition: all 0.2s ease;
+  transition:
+    background-color $transition-fast ease,
+    box-shadow $transition-fast ease,
+    transform $transition-fast ease;
   cursor: pointer;
   margin-top: 1rem;
 
@@ -288,7 +281,7 @@ input {
   }
 }
 
-/* ===== États et messages ===== */
+/* ===== States and messages ===== */
 .is-invalid {
   border-color: var(--red) !important;
 }

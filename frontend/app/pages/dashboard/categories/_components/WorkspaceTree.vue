@@ -2,7 +2,7 @@
   <div v-if="node.data.role === 2" class="tree-node">
     <div class="tree-content">
       <div class="tree-label">
-        <Icon class="icon" name="folder" style="display: inline; width: 18px" fill="var(--yellow)" />
+        <Icon class="icon" name="folder" style="display: inline; width: 18px" fill="var(--orange)" />
         <span>{{ node.label }}</span>
       </div>
       <div class="tree-actions">
@@ -11,24 +11,24 @@
       </div>
     </div>
 
-    <div v-if="node.childrens && node.childrens.length" class="tree-children">
-      <WorkspaceTree v-for="child in node.childrens" :key="child.id" :node="child" @edit="$emit('edit', $event)" @delete="$emit('delete', $event)" />
+    <div v-if="node.children && node.children.length" class="tree-children">
+      <WorkspaceTree v-for="child in node.children" :key="child.id" :node="child" @edit="$emit('edit', $event)" @delete="$emit('delete', $event)" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import type { TreeItem } from '~/helpers/TreeBuilder';
 import type { Node } from '~/stores';
 
-defineProps<{ node: Item<Node> }>();
-
+defineProps<{ node: TreeItem<Node> }>();
 defineEmits(['edit', 'delete']);
 </script>
 
 <style scoped lang="scss">
 .tree-node {
   position: relative;
-  border-left: 1px solid var(--border-color);
+  border-left: 1px solid var(--border);
   margin-left: 20px;
   padding-left: 12px;
 }
@@ -46,7 +46,7 @@ defineEmits(['edit', 'delete']);
   left: -12px;
   width: 12px;
   height: 1px;
-  background-color: var(--border-color);
+  background-color: var(--border);
   content: '';
 }
 
@@ -67,7 +67,7 @@ defineEmits(['edit', 'delete']);
 
 .tree-actions span {
   margin: 0 2.5px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 

@@ -1,59 +1,97 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <div style="width: 100%; padding: 1rem 0">
-    <!-- ⬇️ Remplace le wrapper inline flex par une classe .reader + style dynamique -->
     <div
-      v-if="!error"
+      v-if="!error && article"
       class="reader"
       :style="{
-        marginRight: !isTablet() && preferencesStore.get('hideTOC').value && useSidebar().isOpened.value ? '200px' : '0px',
-        transition: 'margin 0.3s',
+        marginRight: !isTablet && hideTOC && isOpened && hasContent ? '200px' : '0px',
+        transition: 'margin $transition-medium',
       }"
     >
       <div class="doc-container">
-        <DocumentCardHeader :doc="article" :public="true" style="margin: 20px 0" />
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <article
-          v-if="article"
-          ref="element"
-          :class="`${article.theme || preferencesStore.get('theme').value}-theme`"
-          style="max-width: 100%"
-          v-html="article.content_compiled"
-        />
-        <DocumentSkeleton v-else />
+        <!-- Header for all node types -->
+        <NodeDocumentHeader :doc="article" :public="true" style="margin: 20px 0" />
+
+        <!-- Document content if available -->
+        <NodeDocumentContentCompiled v-if="hasContent" :node="article" ref="elementComponent" />
+
+        <!-- Hierarchical children tree -->
+        <NodeTree v-if="children.length > 0" :nodes="children" :parent-id="article.id" />
       </div>
 
-      <!-- ⬇️ retire le style inline (width/margin-left), on gère en CSS -->
-      <div v-if="!isTablet() && !preferencesStore.get('hideTOC').value" class="toc">
-        <TableOfContent :doc="article" :element="element" />
+      <!-- Table of contents only for documents with content -->
+      <div v-if="!isTablet && !hideTOC && hasContent" class="toc">
+        <NodeTOC :doc="article" :element="element" />
       </div>
     </div>
 
-    <Error v-else :error="error" />
+    <!-- Loading state -->
+    <div v-else-if="!error" class="reader">
+      <div class="doc-container">
+        <NodeDocumentSkeleton />
+      </div>
+    </div>
+
+    <Error v-else :error="error?.message" />
   </div>
 </template>
-
 <script setup lang="ts">
-import TableOfContent from '~/pages/dashboard/docs/_components/table-of-content/TableOfContents.vue';
-import DocumentSkeleton from '~/pages/dashboard/docs/_components/DocumentSkeleton.vue';
-import DocumentCardHeader from '~/pages/dashboard/docs/_components/DocumentCardHeader.vue';
+import NodeDocumentContentCompiled from '~/components/Node/Document/ContentCompiled.vue';
 import type { Node } from '~/stores';
 
-const route = useRoute();
 const documentsStore = useNodesStore();
-const preferencesStore = usePreferences();
-const element = ref<HTMLElement>();
+const preferencesStore = usePreferencesStore();
 
-const article = ref<Node | undefined>();
-const error: Ref<false | string> = ref(false);
+const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
+const { isOpened } = useSidebar();
+const { isTablet } = useDevice();
 
-watchEffect(async () => {
-  article.value = undefined;
-  const document_id = route.params.id as string;
-  const doc = await documentsStore.fetchPublic(document_id);
-  if (doc) article.value = doc;
-  else error.value = 'Document not found';
-  useHead({ title: article.value?.name || '' });
+const hideTOC = preferencesStore.get('hideTOC');
+
+const children = ref<Node[]>([]);
+const elementComponent = ref<InstanceType<typeof NodeDocumentContentCompiled>>();
+const element = computed(() => elementComponent.value?.rootElement as HTMLElement | undefined);
+
+const { data: article, error } = await useAsyncData(`public-doc-${route.params.id}`, async (): Promise<Node | undefined> => {
+  const documentId = route.params.id;
+  if (!documentId || typeof documentId !== 'string') return undefined;
+  const result = await documentsStore.fetchPublic(documentId);
+  if (result) {
+    children.value = result.children || [];
+    return result.node;
+  }
+  return undefined;
+});
+
+/** Check if node has displayable content */
+const hasContent = computed(() => article.value?.content_compiled && article.value.content_compiled.trim().length > 0);
+const title = computed(() => article.value?.name || 'Unknown document');
+const description = computed(() => article.value?.description || 'Public document published on Alexandrie, a modern Markdown-based note-taking platform.');
+const baseUrl = runtimeConfig.public.baseUrl || 'https://alexandrie-hub.fr';
+const canonicalUrl = computed(() => `${baseUrl}/doc/${route.params.id}`);
+const ogImage = computed(() => (article.value?.thumbnail ? `${baseUrl}${article.value.thumbnail}` : `${baseUrl}/og/default-article.png`));
+
+useSeoMeta({
+  title,
+  description,
+  keywords: () => article.value?.tags,
+
+  ogTitle: title,
+  ogDescription: description,
+  ogType: 'article',
+  ogUrl: canonicalUrl,
+  ogImage,
+
+  articlePublishedTime: () => (article.value ? new Date(article.value.created_timestamp).toISOString() : undefined),
+
+  articleModifiedTime: () => (article.value ? new Date(article.value.updated_timestamp).toISOString() : undefined),
+
+  twitterCard: 'summary_large_image',
+  twitterTitle: title,
+  twitterDescription: description,
+  twitterImage: ogImage,
 });
 </script>
 

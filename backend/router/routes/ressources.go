@@ -10,12 +10,20 @@ import (
 )
 
 func Uploads(app *app.App, router *gin.RouterGroup) {
-	ressources := router.Group("/ressources")
-	ressourcesCtrl := controllers.NewRessourceController(app)
+	resources := router.Group("/resources")
+	resourcesCtrl := controllers.NewResourceController(app)
 
-	ressources.Use(middlewares.Auth())
-	ressources.GET(("/backup"), utils.WP(ressourcesCtrl.GetBackup))
-	ressources.POST("", utils.WP(ressourcesCtrl.UploadFile))
-	ressources.POST("/avatar", utils.WP(ressourcesCtrl.UploadAvatar))
-	ressources.DELETE("/:id", utils.WP(ressourcesCtrl.DeleteUpload))
+	resources.Use(middlewares.Auth())
+	resources.POST("", utils.WP(resourcesCtrl.UploadFile))
+	resources.POST("/avatar", utils.WP(resourcesCtrl.UploadAvatar))
+}
+
+func Backup(app *app.App, router *gin.RouterGroup) {
+	backup := router.Group("/backup")
+	backupCtrl := controllers.NewBackupController(app)
+
+	backup.Use(middlewares.Auth())
+	backup.POST("", utils.WP(backupCtrl.CreateBackup))
+	backup.GET("/:jobId", utils.WP(backupCtrl.GetBackupStatus))
+	backup.DELETE("/:jobId", utils.WP(backupCtrl.CancelBackup))
 }

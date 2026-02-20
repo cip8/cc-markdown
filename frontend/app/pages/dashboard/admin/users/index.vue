@@ -1,14 +1,14 @@
 <template>
-  <div class="card-component">
+  <div class="page-card">
     <header>
-      <h1>Users manager</h1>
+      <h1>{{ t('admin.users.title') }}</h1>
     </header>
     <DataTable v-if="rows?.length" :headers="headers" :rows="rows || []">
       <template #action="{ cell }">
         <NuxtLink :to="`/dashboard/admin/users/${(cell?.data as User).id}`"><Icon name="view" /></NuxtLink>
       </template>
     </DataTable>
-    <div v-else>No user found.</div>
+    <div v-else>{{ t('admin.users.noUsers') }}</div>
   </div>
 </template>
 <script setup lang="ts">
@@ -16,30 +16,35 @@ import { useAdminStore } from '~/stores/admin.store';
 import type { User } from '~/stores';
 
 const adminStore = useAdminStore();
+const { t } = useI18nT();
+
+const { avatarURL } = useApi();
+const { numericDate } = useDateFormatters();
+
 adminStore.fetchAll();
 
-const headers = [
-  { label: 'Name', key: 'username' },
-  { label: 'Firstname', key: 'firstname' },
-  { label: 'Lastname', key: 'lastname' },
-  { label: 'Email', key: 'email' },
-  { label: 'Role', key: 'role' },
-  { label: 'Created at', key: 'created_at' },
-  { label: 'Action', key: 'action' },
-];
+const headers = computed(() => [
+  { label: t('admin.users.headers.name'), key: 'username' },
+  { label: t('admin.users.headers.firstname'), key: 'firstname' },
+  { label: t('admin.users.headers.lastname'), key: 'lastname' },
+  { label: t('admin.users.headers.email'), key: 'email' },
+  { label: t('admin.users.headers.role'), key: 'role' },
+  { label: t('admin.users.headers.createdAt'), key: 'created_at' },
+  { label: t('admin.users.headers.action'), key: 'action' },
+]);
 
 const rows = computed(() =>
   adminStore.users?.map(u => {
     return {
       username: {
-        content: `<img style="border-radius:50%;width:25px;height:25px;" src="${useAvatar(u)}"/>&nbsp;&nbsp;&nbsp;${u.username}`,
+        content: `<img style="border-radius:50%;width:25px;height:25px;" src="${avatarURL(u)}"/>&nbsp;&nbsp;&nbsp;${u.username}`,
         type: 'html' as const,
       },
       firstname: { content: u.firstname, type: 'text' as const },
       lastname: { content: u.lastname, type: 'text' as const },
       email: { content: u.email, type: 'text' as const },
       role: { content: u.role == 2 ? `<tag class="red">Admin</tag>` : `<tag class="blue">User</tag>`, type: 'html' as const },
-      created_at: { content: new Date(u.created_timestamp).toLocaleDateString(), type: 'text' as const },
+      created_at: { content: numericDate(u.created_timestamp), type: 'text' as const },
       action: { type: 'slot' as const, data: { id: u.id } },
     };
   }),

@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 100vh">
+  <div id="app">
     <ModalManager />
     <ContextMenuManager />
     <NuxtPage />
@@ -11,7 +11,53 @@
 // @ts-expect-error ignore missing types
 import 'virtual:svg-icons-register';
 
-const color = usePreferences().get('primaryColor').value;
-setAppColor(Number(color) || 'primary');
 useFavicon();
+const preferences = usePreferencesStore();
+const { setAppColor } = useAppColors();
+const { setLocale } = useI18n();
+
+const primaryColor = preferences.get('primaryColor');
+const interfaceStyle = preferences.get('style');
+const locale = preferences.get('locale');
+
+/* Watchers to make sure app state reflects preferences */
+watch(
+  primaryColor,
+  color => {
+    setAppColor(Number(color));
+  },
+  { immediate: true },
+);
+
+watch(
+  interfaceStyle,
+  style => {
+    document.documentElement.classList.toggle('glassmorphism', style === 'glassmorphism');
+  },
+  { immediate: true },
+);
+
+watch(
+  locale,
+  newLocale => {
+    if (newLocale) setLocale(newLocale);
+  },
+  { immediate: true },
+);
 </script>
+
+<style lang="scss">
+#app {
+  height: 100vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+@media print {
+  #app {
+    height: auto;
+    overflow: visible;
+  }
+}
+</style>

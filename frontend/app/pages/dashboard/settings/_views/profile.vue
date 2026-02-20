@@ -1,44 +1,54 @@
 <template>
   <div>
-    <h2 class="ctitle">My Profile</h2>
-    <p class="csubtitle">Manage your profile settings and preferences.</p>
+    <h2 class="page-title">{{ t('settings.profile.title') }}</h2>
+    <p class="page-subtitle">{{ t('settings.profile.subtitle') }}</p>
     <form v-if="userStore.user" @submit.prevent="updateUser">
       <div class="form-group">
-        <label for="username">Username</label>
+        <label for="username">{{ t('settings.profile.username') }}</label>
         <input id="username" v-model="userStore.user.username" type="text" disabled required />
       </div>
       <div class="form-group">
-        <label for="firstname">First Name</label>
+        <label for="firstname">{{ t('settings.profile.firstname') }}</label>
         <input id="firstname" v-model="userStore.user.firstname" type="text" />
       </div>
       <div class="form-group">
-        <label for="lastname">Last Name</label>
+        <label for="lastname">{{ t('settings.profile.lastname') }}</label>
         <input id="lastname" v-model="userStore.user.lastname" type="text" />
       </div>
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="email">{{ t('settings.profile.email') }}</label>
         <input id="email" v-model="userStore.user.email" type="email" required />
       </div>
       <div class="form-group">
-        <label>Avatar</label>
-        <img :src="avatarPreview || useAvatar(userStore.user)" class="avatar" @click="selectAvatar" />
+        <label>{{ t('settings.profile.avatar') }}</label>
+        <img :src="avatarDisplayed" class="avatar" @click="selectAvatar" />
         <input ref="avatarInput" type="file" accept="image/*" style="display: none" @change="previewAvatar" />
       </div>
-      <AppButton type="primary">Update profile</AppButton>
+      <AppButton type="primary">{{ t('common.actions.update') }}</AppButton>
     </form>
     <hr style="margin: 10px 0" />
-    <p><strong>Account creation:</strong> {{ formatDate(userStore.user?.created_timestamp) }}</p>
-    <p><strong>Last update:</strong> {{ formatDate(userStore.user?.updated_timestamp) }}</p>
+    <p>
+      <strong>{{ t('settings.profile.accountCreation') }}:</strong> {{ shortDate(userStore.user?.created_timestamp) }}
+    </p>
+    <p>
+      <strong>{{ t('settings.profile.lastUpdate') }}:</strong> {{ shortDate(userStore.user?.updated_timestamp) }}
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 const userStore = useUserStore();
-const ressourcesStore = useRessourcesStore();
-const avatarInput = ref<HTMLInputElement | null>(null);
-const selectAvatar = () => avatarInput.value?.click();
+const resourcesStore = useResourcesStore();
 
+const { avatarURL } = useApi();
+const { shortDate } = useDateFormatters();
+const { t } = useI18nT();
+
+const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref('');
+const avatarDisplayed = computed(() => avatarPreview.value || avatarURL(userStore.user));
+
+const selectAvatar = () => avatarInput.value?.click();
 
 const uploadAvatar = async () => {
   if (!userStore.user) return;
@@ -46,8 +56,8 @@ const uploadAvatar = async () => {
   if (!file) return;
   const body = new FormData();
   body.append('file', file);
-  const r = await ressourcesStore.postAvatar(body);
-  return r.content_compiled || r.original_path;
+  await resourcesStore.postAvatar(body);
+  userStore.user.avatar = Date.now().toString();
 };
 const previewAvatar = (event: Event) => {
   if (!userStore.user) return;
@@ -61,12 +71,14 @@ const previewAvatar = (event: Event) => {
 
 const updateUser = async () => {
   if (!userStore.user) return;
-  await uploadAvatar();
-  userStore.user.avatar = 'ok';
-  userStore
-    .update(userStore.user)
-    .then(() => useNotifications().add({ type: 'success', title: 'User updated' }))
-    .catch(e => useNotifications().add({ type: 'error', title: 'Error', message: e }));
+  try {
+    await uploadAvatar();
+    await userStore.update(userStore.user);
+    useNotifications().add({ type: 'success', title: t('settings.profile.notifications.updated') });
+  } catch (e) {
+    avatarPreview.value = '';
+    useNotifications().add({ type: 'error', title: t('settings.profile.notifications.error'), message: e as string });
+  }
 };
 </script>
 
@@ -74,7 +86,7 @@ const updateUser = async () => {
 .avatar {
   width: 100px;
   height: 100px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
   border-radius: 50%;
   cursor: pointer;
   object-fit: cover;

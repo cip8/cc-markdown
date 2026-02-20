@@ -1,109 +1,197 @@
 <template>
   <div>
-    <h2 class="ctitle">Security</h2>
-    <p class="csubtitle">Manage your security settings and monitor your account activity.</p>
-    <h3>Last connection</h3>
-    <div v-if="store.last_connection" class="last-connection">
-      <div style="display: flex">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="569.4 86.3 83.6 48.2" width="100px">
-          <path
-            fill="var(--cl-chassis-back, black)"
-            d="M577 89.8c0-1.4.2-2 .6-2.6.5-.5 1.2-.9 2.8-.9h61.7c1.4 0 2 .3 2.5.8s.7 1.2.7 2.7v41c0 1.4-.2 2-.5 2.4a2.7 2.7 0 0 1-2.2 1.1h-63c-.8 0-1.6-.3-2-1-.4-.4-.6-1-.6-2.5v-41Z"
-          />
-          <path
-            fill="var(--cl-chassis-screen, #323232)"
-            d="M578.4 132.9h65.5c.3 0 .6-.2.8-.4.2-.2.2-.5.2-1.4V89.8c0-1.2-.1-2-.6-2.4-.5-.5-1-.7-2.2-.7h-61.7c-1.3 0-2 .3-2.5.8-.4.4-.5 1-.5 2.3v41.3c0 .9 0 1.2.2 1.4.2.2.5.4.8.4Z"
-          />
-          <path
-            fill-rule="evenodd"
-            stroke="var(--cl-chassis-back1, 'gold')"
-            stroke-width="0.3"
-            d="M611.2 88.5a.3.3 0 1 0 0-.5.3.3 0 1 0 0 .5Z"
-            clip-rule="evenodd"
-          />
-          <path
-            fill="var(--cl-chassis-bottom, #191919)"
-            fill-rule="evenodd"
-            d="M569.4 133.3v-.5H653v.5s-1.9.6-4 .8c-1.4.1-3.7.4-8.9.4h-57.4c-4.5 0-8.3-.3-10-.5-1.7-.2-3.3-.7-3.3-.7Z"
-            clip-rule="evenodd"
-          />
-          <path fill="var(--cl-screen, #111111)" fill-rule="evenodd" d="M579.7 89.5h63v39.4h-63V89.5Z" clip-rule="evenodd" />
-        </svg>
-        <div>
-          <p><strong>Last connection:</strong> {{ new Date(store.last_connection.timestamp).toLocaleString() }}</p>
-          <p><strong>IP:</strong> {{ store.last_connection.ip_adress }} ({{ store.last_connection.location }})</p>
-          <p><strong>Browser:</strong> {{ parseUserAgent(store.last_connection.user_agent).browser }}</p>
-          <p><strong>OS:</strong> {{ parseUserAgent(store.last_connection.user_agent).os }}</p>
-        </div>
-      </div>
-      <p>{{ store.last_connection.user_agent }}</p>
+    <h2 class="page-title">{{ t('settings.security.title') }}</h2>
+    <p class="page-subtitle">{{ t('settings.security.subtitle') }}</p>
+    <h3>{{ t('settings.security.activeSessions') }}</h3>
+    <p class="section-description">{{ t('settings.security.activeSessionsDesc') }}</p>
+    <div class="sessions-list">
+      <SessionCard v-for="(session, index) in store.sessions" :key="session.id" :session="session" :is-current="index === 0" :show-user-agent="true" />
     </div>
-    <p class="warning">If you don't recognize this connection, please change your password and click on "Log out from all devices".</p>
-    <h3>Password</h3>
+    <p v-if="store.sessions.length === 0" class="no-sessions">{{ t('settings.security.noSessions') }}</p>
+    <div v-if="hasUnrecognizedSession" class="warning-box">
+      <Icon name="warning" display="sm" />
+      <div>
+        <strong>{{ t('settings.security.unrecognizedSession') }}</strong>
+        <p>{{ t('settings.security.unrecognizedSessionDesc') }}</p>
+      </div>
+    </div>
+
+    <!-- OIDC Linked Accounts -->
+    <template v-if="oidcEnabled">
+      <h3>{{ t('settings.security.connectedAccounts') }}</h3>
+      <p class="section-description">{{ t('settings.security.connectedAccountsDesc') }}</p>
+      <div class="oidc-accounts">
+        <div v-if="loadingOIDC" class="oidc-loading">
+          <LoaderSpinner :size="24" />
+          <span>{{ t('settings.security.loadingAccounts') }}</span>
+        </div>
+        <template v-else>
+          <div v-for="provider in availableProviders" :key="provider.name" class="oidc-account">
+            <div class="oidc-account-info">
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <span class="oidc-icon" v-html="getProviderIcon(provider.name)"></span>
+              <span class="oidc-name">{{ getProviderLabel(provider.name) }}</span>
+            </div>
+            <div class="oidc-account-actions">
+              <template v-if="isLinked(provider.name)">
+                <span class="oidc-status linked">{{ t('settings.security.connected') }}</span>
+                <AppButton type="danger" size="sm" @click="unlinkAccount(provider.name)">{{ t('settings.security.unlink') }}</AppButton>
+              </template>
+              <template v-else>
+                <span class="oidc-status">{{ t('settings.security.notConnected') }}</span>
+                <AppButton type="secondary" size="sm" @click="linkAccount(provider.name)">{{ t('settings.security.link') }}</AppButton>
+              </template>
+            </div>
+          </div>
+          <p v-if="availableProviders.length === 0" class="no-providers">{{ t('settings.security.noProviders') }}</p>
+        </template>
+      </div>
+    </template>
+
+    <h3>{{ t('settings.security.password') }}</h3>
     <form @submit.prevent="changePassword">
       <div class="form-group">
-        <label for="password">New password</label>
+        <label for="password">{{ t('settings.security.newPassword') }}</label>
         <input id="password" v-model="passwordValue" type="password" required />
       </div>
       <div class="form-group">
         <span style="display: flex; align-items: center"
-          ><label for="password_confirm">Confirm password</label> <span v-if="err_password_not_match" class="err"> Password do not match !</span></span
+          ><label for="password_confirm">{{ t('settings.security.confirmPassword') }}</label>
+          <span v-if="errPasswordNotMatch" class="err"> {{ t('settings.security.passwordNotMatch') }}</span></span
         >
         <input id="password_confirm" v-model="passwordConfirmValue" type="password" required />
       </div>
-      <AppButton type="primary">Change password</AppButton>
+      <AppButton type="primary">{{ t('settings.security.changePassword') }}</AppButton>
     </form>
-    <h3>Danger</h3>
-    <div>
-      You can log out from all devices or log out from this device. <br />
-      Be careful, if you log out from all devices, you will be redirected to the login page. Please save your work before.
+    <h2>{{ t('settings.security.dangerZone') }}</h2>
+    <p class="page-subtitle">{{ t('settings.security.dangerZoneDesc') }}</p>
+
+    <div class="danger-section">
+      <div class="danger-card">
+        <div class="danger-card-content">
+          <div class="danger-card-icon">
+            <Icon name="logout" display="sm" />
+          </div>
+          <div class="danger-card-info">
+            <h4>{{ t('settings.security.logout') }}</h4>
+            <p>{{ t('settings.security.logoutDesc') }}</p>
+          </div>
+        </div>
+        <AppButton type="secondary" @click="logout">{{ t('settings.security.logout') }}</AppButton>
+      </div>
+
+      <div class="danger-card">
+        <div class="danger-card-content">
+          <div class="danger-card-icon warning">
+            <Icon name="devices" display="sm" />
+          </div>
+          <div class="danger-card-info">
+            <h4>{{ t('settings.security.logoutAll') }}</h4>
+            <p>{{ t('settings.security.logoutAllDesc') }}</p>
+          </div>
+        </div>
+        <AppButton type="danger" @click="logoutAll">{{ t('settings.security.logoutAll') }}</AppButton>
+      </div>
+
+      <div class="danger-card destructive">
+        <div class="danger-card-content">
+          <div class="danger-card-icon destructive">
+            <Icon name="delete" display="sm" />
+          </div>
+          <div class="danger-card-info">
+            <h4>{{ t('settings.security.deleteAccount') }}</h4>
+            <p>{{ t('settings.security.deleteAccountDesc') }}</p>
+            <details class="delete-details">
+              <summary>{{ t('settings.security.deleteAccountDetails') }}</summary>
+              <ul>
+                <li>{{ t('settings.security.deleteAccountList.files') }}</li>
+                <li>{{ t('settings.security.deleteAccountList.uploads') }}</li>
+                <li>{{ t('settings.security.deleteAccountList.shares') }}</li>
+                <li>{{ t('settings.security.deleteAccountList.data') }}</li>
+              </ul>
+              <p class="backup-hint">
+                <NuxtLink to="/dashboard/settings?p=backup">{{ t('settings.security.backupHint') }}</NuxtLink>
+              </p>
+            </details>
+          </div>
+        </div>
+        <AppButton type="danger" @click="openDeleteModal">{{ t('settings.security.deleteAccount') }}</AppButton>
+      </div>
     </div>
-    <AppButton type="danger" @click="logout">Log out</AppButton>
-    <AppButton type="danger" @click="logoutAll">Log out from all devices</AppButton>
-    <h2>Delete account</h2>
-    <div>
-      You can delete your account. <br />
-      Be careful, if you delete your account, you will lose all your data and you will not be able to recover it.
-      <br />
-      <strong>By deleting your account you will remove:</strong>
-      <ul>
-        <li>All your files and folders</li>
-        <li>All your uploads</li>
-        <li>All your shares</li>
-        <li>All your account data (preferences, profile...)</li>
-      </ul>
-      <p>
-        You can <NuxtLink to="/dashboard/settings?p=backup" style="color: var(--primary); text-decoration: underline">export your data</NuxtLink> before
-        deleting your account.
-      </p>
-    </div>
-    <AppButton type="danger" @click="openDeleteModal">Delete account</AppButton>
   </div>
 </template>
 
 <script setup lang="ts">
+import { getProviderIcon, getProviderLabel } from '~/helpers/oidc-providers';
 import DeleteAccountModal from '../_modals/DeleteAccountModal.vue';
-import { parseUserAgent } from '~/helpers/utils';
+
+const emit = defineEmits(['close']);
+const { t } = useI18nT();
 
 const store = useUserStore();
-const emit = defineEmits(['close']);
+store.fetchSessions();
+
+const {
+  providers: availableProviders,
+  isEnabled: oidcEnabled,
+  fetchProviders,
+  fetchLinkedProviders,
+  linkProvider,
+  unlinkProvider,
+  isProviderLinked,
+} = useOIDC();
+
+const loadingOIDC = ref(true);
+
+// Check if there might be unrecognized sessions (sessions other than current)
+const hasUnrecognizedSession = computed(() => {
+  return store.sessions.length > 1;
+});
+
+function isLinked(providerName: string): boolean {
+  return isProviderLinked(providerName);
+}
+
+async function linkAccount(providerName: string) {
+  try {
+    await linkProvider(providerName);
+  } catch (error) {
+    useNotifications().add({ type: 'error', title: (error as Error).message || t('settings.security.notifications.linkError') });
+  }
+}
+
+async function unlinkAccount(providerName: string) {
+  try {
+    await unlinkProvider(providerName);
+    useNotifications().add({ type: 'success', title: t('settings.security.notifications.accountUnlinked', { provider: getProviderLabel(providerName) }) });
+  } catch (error) {
+    useNotifications().add({ type: 'error', title: (error as Error).message || t('settings.security.notifications.unlinkError') });
+  }
+}
+
+// Load OIDC data on mount
+onMounted(async () => {
+  await fetchProviders();
+  if (oidcEnabled.value) await fetchLinkedProviders();
+  loadingOIDC.value = false;
+});
 
 const passwordValue = ref('');
 const passwordConfirmValue = ref('');
-const err_password_not_match = ref(false);
+const errPasswordNotMatch = ref(false);
 
 const changePassword = async () => {
   if (!store.user) return;
-  if (passwordValue.value !== passwordConfirmValue.value) return (err_password_not_match.value = true);
+  if (passwordValue.value !== passwordConfirmValue.value) return (errPasswordNotMatch.value = true);
   store
     .updatePassword(passwordValue.value)
     .then(() => {
       passwordValue.value = '';
       passwordConfirmValue.value = '';
-      err_password_not_match.value = false;
-      useNotifications().add({ type: 'success', title: 'Password changed successfully' });
+      errPasswordNotMatch.value = false;
+      useNotifications().add({ type: 'success', title: t('settings.security.notifications.passwordChanged') });
     })
-    .catch(e => useNotifications().add({ type: 'error', title: 'Error during password saving', message: e.message }));
+    .catch(e => useNotifications().add({ type: 'error', title: t('settings.security.notifications.passwordError'), message: e.message }));
 };
 
 const logout = () => {
@@ -119,26 +207,263 @@ const openDeleteModal = () => useModal().add(new Modal(shallowRef(DeleteAccountM
 </script>
 
 <style scoped lang="scss">
-.last-connection {
-  padding: 0.3rem 0.5rem;
-  border-radius: 10px;
-  background-color: var(--bg-contrast-2);
-  align-items: center;
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.no-sessions {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  text-align: center;
+  background: var(--surface-raised);
+  font-style: italic;
 }
 
 p {
-  margin: 0.5rem;
+  margin: 0.5rem 0;
   font-size: 0.9rem;
 }
 
-.warning {
-  font-size: 0.9rem;
-  color: var(--red);
+.warning-box {
+  display: flex;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--orange-border);
+  border-radius: var(--radius-lg);
+  background: var(--orange-bg);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    color: var(--orange);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  strong {
+    display: block;
+    color: var(--orange-dark);
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-body);
+  }
 }
 
 .err {
   padding: 0.1rem 0.5rem;
   font-size: 0.8rem;
   color: var(--red);
+}
+
+/* OIDC Accounts Section */
+.section-description {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.oidc-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.oidc-loading {
+  display: flex;
+  padding: 1rem;
+  color: var(--text-secondary);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.oidc-account {
+  display: flex;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.oidc-account-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.oidc-icon {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+
+  :deep(svg) {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.oidc-name {
+  font-weight: 500;
+}
+
+.oidc-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.oidc-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+
+  &.linked {
+    font-weight: 500;
+    color: var(--green);
+  }
+}
+
+/* Danger Section */
+.danger-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.danger-card {
+  display: flex;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  transition: border-color $transition-fast ease;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  &.destructive {
+    border-color: var(--red-border);
+    background: var(--red-bg-light);
+
+    &:hover {
+      border-color: var(--red);
+    }
+  }
+}
+
+.danger-card-content {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  flex: 1;
+  gap: 1rem;
+}
+
+.danger-card-icon {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  background: var(--surface-overlay);
+  align-items: center;
+  flex-shrink: 0;
+  justify-content: center;
+
+  &.warning {
+    color: var(--orange-dark);
+    background: var(--orange-bg);
+  }
+
+  &.destructive {
+    color: var(--red);
+    background: var(--red-bg);
+  }
+}
+
+.danger-card-info {
+  min-width: 0;
+  flex: 1;
+
+  h4 {
+    margin: 0 0 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  > p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+  }
+}
+
+.delete-details {
+  margin-top: 0.75rem;
+
+  summary {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--red-dark);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  ul {
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding-left: 1.25rem;
+
+    li {
+      margin: 0.2rem 0;
+    }
+  }
+
+  .backup-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+
+    a {
+      font-weight: 500;
+      color: var(--primary);
+      text-decoration: underline;
+    }
+  }
+}
+
+@media (width <= 600px) {
+  .danger-card {
+    align-items: stretch;
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }
 </style>

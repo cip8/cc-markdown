@@ -1,48 +1,130 @@
 <template>
   <div
-    class="dropzone"
-    :class="{ 'drag-over': isDragOver }"
+    class="drop"
+    :class="{ dragging: isDragOver, 'has-files': selectedFiles.length }"
     @dragover.prevent
     @drop.prevent="handleFileDrop"
     @dragenter.prevent="dragEnter"
     @dragleave.prevent="dragLeave"
     @paste.prevent="handlePaste"
   >
-    <input ref="fileInput" type="file" @change="handleFileSelect" />
-    <Icon name="layers" size="40px" style="margin: 10px 0" />
-    <div v-if="selectedFile" class="file-info">
-      <div class="file-chip">
-        <span class="file-name">{{ selectedFile.name }}</span>
-        <button class="remove-btn" title="Remove file" @click="reset">×</button>
+    <input ref="fileInput" type="file" :multiple="multiple" @change="handleFileSelect" />
+
+    <div v-if="selectedFiles.length" class="files">
+      <div class="list">
+        <div v-for="(file, index) in selectedFiles" :key="index" class="item">
+          <div class="icon">
+            <Icon :name="resolveFileIcon(file.type)" />
+          </div>
+          <div class="details">
+            <span class="name">{{ file.name }}</span>
+            <span class="meta">{{ readableFileSize(file.size) }} • {{ resolveFileType(file.type) }}</span>
+          </div>
+          <button class="remove" @click.stop="removeFile(index)">
+            <Icon name="close" size="16px" />
+            <p class="hint-tooltip">{{ t('cdn.appdrop.removeFile') }}</p>
+          </button>
+        </div>
       </div>
-      <div class="file-size">{{ readableFileSize(selectedFile.size) }}</div>
+      <footer>
+        <span class="total">{{ selectedFiles.length }} file{{ selectedFiles.length > 1 ? 's' : '' }} • {{ readableFileSize(totalSize) }}</span>
+        <span class="link" @click="triggerFileSelect">+ {{ t('cdn.appdrop.addMore') }}</span>
+      </footer>
     </div>
-    <div v-else>Drop file here or <span class="clickable" @click="triggerFileSelect">click to select from computer</span>.</div>
+
+    <div v-else class="empty">
+      <Icon name="layers" size="40px" />
+      <p v-if="multiple">
+        <i18n-t scope="global" keypath="cdn.appdrop.promptPlural">
+          <template #link>
+            <span class="link" @click="triggerFileSelect">{{ t('cdn.appdrop.link') }}</span>
+          </template>
+        </i18n-t>
+      </p>
+      <p v-else>
+        <i18n-t scope="global" keypath="cdn.appdrop.prompt">
+          <template #link>
+            <span class="link" @click="triggerFileSelect">{{ t('cdn.appdrop.link') }}</span>
+          </template>
+        </i18n-t>
+      </p>
+      <span v-if="multiple" class="hint">{{ t('cdn.appdrop.max', { n: props.maxFiles }) }}</span>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
-import { readableFileSize } from '~/helpers/ressources';
-const selectedFile: Ref<File | null | undefined> = ref(null);
+import { readableFileSize, resolveFileIcon, resolveFileType } from '~/helpers/resources';
+
+const props = withDefaults(
+  defineProps<{
+    multiple?: boolean;
+    maxFiles?: number;
+  }>(),
+  {
+    maxFiles: 10,
+    multiple: false,
+  },
+);
+
+const { t } = useI18nT();
+const selectedFiles = ref<File[]>([]);
 const isDragOver = ref(false);
-const fileInput: Ref<HTMLInputElement | null> = ref(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+
+const totalSize = computed(() => selectedFiles.value.reduce((acc, file) => acc + file.size, 0));
+
+const emit = defineEmits<{
+  select: [files: File | File[] | null];
+}>();
+
 const triggerFileSelect = () => fileInput.value!.click();
+
 const handleFileSelect = (event: Event) => {
-  emit('select', (event.target as HTMLInputElement | null)?.files?.[0] || null);
-  selectedFile.value = (event.target as HTMLInputElement | null)?.files?.[0] || null;
+  const files = (event.target as HTMLInputElement | null)?.files;
+  if (!files) return;
+
+  if (props.multiple) {
+    const fileArray = Array.from(files).slice(0, props.maxFiles);
+    selectedFiles.value = fileArray;
+    emit('select', fileArray);
+  } else {
+    selectedFiles.value = files[0] ? [files[0]] : [];
+    emit('select', files[0] || null);
+  }
 };
-const emit = defineEmits(['select']);
+
 const handleFileDrop = (event: DragEvent) => {
   if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-    selectedFile.value = event.dataTransfer.files[0];
-    emit('select', event.dataTransfer.files[0]);
+    const files = event.dataTransfer.files;
+    if (props.multiple) {
+      const fileArray = Array.from(files).slice(0, props.maxFiles);
+      selectedFiles.value = fileArray;
+      emit('select', fileArray);
+    } else {
+      const file = files[0];
+      if (file) {
+        selectedFiles.value = [file];
+        emit('select', file);
+      }
+    }
     isDragOver.value = false;
   }
 };
+
 const dragEnter = () => (isDragOver.value = true);
 const dragLeave = () => (isDragOver.value = false);
 
+const removeFile = (index: number) => {
+  selectedFiles.value.splice(index, 1);
+  if (props.multiple) {
+    emit('select', selectedFiles.value.length ? selectedFiles.value : null);
+  } else {
+    emit('select', null);
+  }
+};
+
 const reset = () => {
-  selectedFile.value = null;
+  selectedFiles.value = [];
   if (fileInput.value) fileInput.value.value = '';
 };
 
@@ -50,14 +132,28 @@ const handlePaste = (event: ClipboardEvent) => {
   const items = event.clipboardData?.items;
   if (!items) return;
 
+  const pastedFiles: File[] = [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     if (item?.type.startsWith('image/')) {
       const file = item.getAsFile();
       if (file) {
-        selectedFile.value = file;
+        pastedFiles.push(file);
+        if (!props.multiple) break;
+      }
+    }
+  }
+
+  if (pastedFiles.length) {
+    if (props.multiple) {
+      const limitedFiles = pastedFiles.slice(0, props.maxFiles);
+      selectedFiles.value = limitedFiles;
+      emit('select', limitedFiles);
+    } else {
+      const file = pastedFiles[0];
+      if (file) {
+        selectedFiles.value = [file];
         emit('select', file);
-        break;
       }
     }
   }
@@ -67,23 +163,36 @@ defineExpose({ reset });
 </script>
 
 <style scoped lang="scss">
-.dropzone {
+.drop {
   position: relative;
   display: flex;
   width: 100%;
-  height: 150px;
-  border: 2px dashed var(--border-color);
-  border-radius: 4px;
+  min-height: 150px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  color: var(--font-color-light);
-  background-color: var(--dropzone-bg, transparent);
-  transition: background-color $transition-duration;
+  color: var(--text-secondary);
+  background-color: transparent;
+  transition:
+    border-color $transition-base ease,
+    background-color $transition-base ease;
   align-items: center;
   flex-direction: column;
   justify-content: center;
 
   &:hover {
-    background-color: var(--bg-contrast);
+    border-color: var(--border-strong);
+    background-color: var(--surface-raised);
+  }
+
+  &.has-files {
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  &.dragging {
+    border-color: var(--primary);
+    background-color: var(--surface-raised);
   }
 
   input[type='file'] {
@@ -91,64 +200,144 @@ defineExpose({ reset });
   }
 }
 
-.drag-over {
-  border-color: var(--primary);
-  background-color: var(--bg-contrast);
-  transition: background-color $transition-duration, border-color $transition-duration;
-}
-
-.file-info {
+.empty {
   display: flex;
-  color: var(--primary);
   align-items: center;
   flex-direction: column;
+  gap: 8px;
+
+  p {
+    margin: 0;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
 }
 
-.file-chip {
-  display: inline-flex;
-  padding: 0 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  font-size: 0.9rem;
-  color: var(--font-color-dark);
-  background: var(--bg-contrast);
-  align-items: center;
+.files {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list {
+  display: flex;
+  max-height: 200px;
+  flex-direction: column;
   gap: 6px;
+  overflow-y: auto;
 }
 
-.file-name {
-  max-width: 200px;
+.item {
+  display: flex;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  align-items: center;
+  gap: 12px;
+
+  &:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+
+    .remove {
+      opacity: 1;
+    }
+  }
+}
+
+.icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  align-items: center;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.details {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.remove-btn {
+.meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.remove {
   display: flex;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--font-color-light);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
   background: transparent;
+  opacity: 0.6;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    opacity 0.15s ease;
   align-items: center;
   cursor: pointer;
+  flex-shrink: 0;
   justify-content: center;
+  position: relative;
 
   &:hover {
-    color: var(--danger, #e74c3c);
+    color: var(--red);
+    background: var(--surface-transparent);
+    opacity: 1;
+    .hint-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 }
 
-.file-size {
-  font-size: 0.8rem;
-  color: var(--font-color-dark);
-  margin-top: 5px;
+footer {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  justify-content: space-between;
+  padding-top: 8px;
 }
 
-.clickable {
+.total {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.link {
+  font-size: 13px;
   color: var(--primary);
   cursor: pointer;
-  text-decoration: underline;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 </style>

@@ -1,137 +1,296 @@
 <template>
-  <div class="card-component">
+  <div class="page-card">
     <header>
-      <h1>File manager</h1>
-      <ViewSelection v-model="view" />
+      <h1>{{ t('cdn.meta.title') }}</h1>
+      <div class="action-row">
+        <NodeFilter v-show="!device.isMobile" :nodes="nodes" @update:nodes="filteredResources = $event" />
+        <ViewSelection v-model="view" />
+      </div>
     </header>
-    <AppDrop ref="dropComponent" @select="selectFile" />
+    <div class="storage-indicator">
+      <div class="storage-info">
+        <span class="storage-label">{{ t('cdn.storageUsed') }}</span>
+        <span class="storage-values">{{ readableFileSize(totalUsedSpace) }} / {{ readableFileSize(MAX_STORAGE) }}</span>
+      </div>
+      <div class="progress-bar">
+        <div
+          class="progress-fill"
+          :style="{ width: storagePercentage + '%' }"
+          :class="{ warning: storagePercentage > 80, danger: storagePercentage > 95 }"
+        ></div>
+      </div>
+      <span class="storage-percentage">{{ storagePercentage.toFixed(1) }}%</span>
+    </div>
+    <AppDrop ref="dropComponent" multiple :max-files="10" @select="selectFiles" />
     <div style="display: flex; width: 100%; padding: 12px 0; align-items: center; flex-direction: column; gap: 10px">
-      <AppButton type="primary" :disabled="!selectedFile" @click="submitFile">Upload on server</AppButton>
-      <LoaderSpinner v-if="isLoading" />
+      <AppButton type="primary" :disabled="!selectedFiles.length" @click="submitFiles">
+        {{ selectedFiles.length ? t('cdn.actions.upload.multiple', { n: selectedFiles.length }) : t('cdn.actions.upload.idle') }}
+      </AppButton>
+      <div v-if="isLoading" class="upload-progress">
+        <LoaderSpinner />
+        <span>{{ t('cdn.actions.upload.progress', { n: uploadProgress.current, total: uploadProgress.total }) }}</span>
+      </div>
     </div>
-    <div v-if="fileLink" class="link-section">
-      <input v-model="fileLink" type="text" readonly />
-      <AppButton type="primary" @click="copyLink">Copy link</AppButton>
+    <div v-if="fileLinks.length" class="link-section">
+      <div class="links-text" v-text="linksText"></div>
+      <div class="links-actions">
+        <AppButton type="primary" @click="copyLinks">{{ t('common.actions.copy') }} {{ fileLinks.length > 1 ? 'links' : 'link' }}</AppButton>
+        <AppButton type="secondary" @click="fileLinks = []">{{ t('common.actions.clear') }}</AppButton>
+      </div>
     </div>
-    <div v-if="sortedRessources.length" class="ressources-list">
+    <div v-if="filteredResources.length" class="resources-list">
       <DataTable v-if="view === 'table'" :headers="headers" :rows="rows">
         <template #bulk-actions="{ selected }">
           <div class="bulk-actions">
             <span class="selected-count">{{ selected.length }}</span>
-            <span style="height: 32px; border-left: 1px solid var(--border-color); margin-left: 4px"></span>
-            <Icon name="delete" fill="var(--font-color-light)" class="action-btn" @click="bulkDelete(selected)" />
+            <span style="height: 32px; border-left: 1px solid var(--border); margin-left: 4px"></span>
+            <span @click="bulkDelete(selected)"><Icon name="delete" fill="var(--text-secondary)" class="action-btn" /></span>
           </div>
         </template>
         <template #action="{ cell }">
           <NuxtLink :href="`/dashboard/cdn/${(cell?.data as Node).id}/preview`" style="margin-right: 10px"><Icon name="view" /> </NuxtLink>
           <NuxtLink :to="`/dashboard/cdn/${(cell?.data as Node).id}`"><Icon name="edit" style="margin-right: 10px" /></NuxtLink>
-          <Icon name="delete" @click="() => deleteRessource((cell?.data as Node).id)" />
+          <span @click="() => deleteResource(cell?.data as Node)"><Icon name="delete" /></span>
         </template>
       </DataTable>
       <div v-else>
-        <input v-model="filter" type="text" placeholder="Search..." class="search" />
         <hr />
         <div class="images-grid">
-          <div v-for="image in filteredRessources" :key="image.id" class="image-item" @click="router.push(`/dashboard/cdn/${image.id}/preview`)">
-            <img :src="fileURL(image)" :alt="image.name" class="image-preview" />
+          <div
+            v-for="image in filteredResources"
+            :key="image.id"
+            class="image-item"
+            @click="router.push(`/dashboard/cdn/${image.id}/preview`)"
+            @contextmenu="event => showContextMenu(event, image)"
+          >
+            <img :src="resolvePreviewUrl(image)" :alt="image.name" class="image-preview" />
             <div class="image-info">
               <span class="image-name">{{ image.name }}</span>
               <span class="image-size">{{ readableFileSize(image.size ?? 0) }}</span>
             </div>
           </div>
-          <div v-if="!filteredRessources.length" class="not-found">
-            <p>No result found for "{{ filter }}"</p>
+          <div v-if="!filteredResources.length" class="not-found">
+            <p>{{ t('common.search.noResults', { filter: filter }) }}</p>
           </div>
         </div>
       </div>
     </div>
-    <NoContent v-else title="No ressource found"></NoContent>
+    <NoContent v-else :title="t('cdn.page.empty')"></NoContent>
   </div>
 </template>
 <script setup lang="ts">
-import DeleteRessourceModal from './_modals/DeleteRessourceModal.vue';
-import { readableFileSize } from '~/helpers/ressources';
 import type { Field } from '~/components/DataTable.vue';
 import type { Node } from '~/stores';
 
-definePageMeta({ breadcrumb: 'Upload' });
+import ResourceContextMenu from '~/components/Node/Action/ResourceContextMenu.vue';
+import DeleteNodeModal from '~/components/Node/Modals/Delete.vue';
+import { readableFileSize, resolvePreviewUrl } from '~/helpers/resources';
 
 const router = useRouter();
-const ressourcesStore = useRessourcesStore();
+const resourcesStore = useResourcesStore();
 const nodesStore = useNodesStore();
+const { t } = useI18nT();
+const device = useDevice();
+const appColors = useAppColors();
+const { numericDate } = useDateFormatters();
+const contextMenu = useContextMenu();
+const { resourceURL } = useApi();
 
-const view = ref<'table' | 'list'>('list');
-const selectedFile: Ref<File | undefined> = ref();
-const fileLink = ref('');
+const view = ref<'list' | 'table'>('list');
+const selectedFiles = ref<File[]>([]);
+const fileLinks = ref<string[]>([]);
 const isLoading = ref(false);
+const uploadProgress = ref({ current: 0, total: 0 });
 const dropComponent = ref();
 const filter = ref('');
-const { CDN } = useApi();
 
-const sortedRessources = computed(() => nodesStore.ressources.toArray().sort((a, b) => b.created_timestamp - a.created_timestamp));
-const filteredRessources = computed(() => sortedRessources.value.filter(r => r.name.toLowerCase().includes(filter.value.toLowerCase())));
+const MAX_STORAGE = 1024 * 1024 * 1024; // 1 GB in bytes
 
-const selectFile = (file?: File) => (selectedFile.value = file);
-const copyLink = () => navigator.clipboard.writeText(fileLink.value!);
-const submitFile = async () => {
-  if (!selectedFile.value) return;
+const nodes = computed(() => nodesStore.resources.toArray());
+const filteredResources = ref(nodes.value);
+
+const totalUsedSpace = computed(() => nodes.value.reduce((acc, node) => acc + (node.size ?? 0), 0));
+const storagePercentage = computed(() => Math.min((totalUsedSpace.value / MAX_STORAGE) * 100, 100));
+const linksText = computed(() => fileLinks.value.join('\n'));
+
+function showContextMenu(event: MouseEvent, node: Node) {
+  contextMenu.open(shallowRef(ResourceContextMenu), event, {
+    props: { node: node },
+  });
+}
+
+const selectFiles = (files: File | File[] | null) => {
+  if (!files) {
+    selectedFiles.value = [];
+  } else if (Array.isArray(files)) {
+    selectedFiles.value = files;
+  } else {
+    selectedFiles.value = [files];
+  }
+};
+const copyLinks = () => navigator.clipboard.writeText(fileLinks.value.join('\n'));
+const submitFiles = async () => {
+  if (!selectedFiles.value.length) return;
   isLoading.value = true;
-  const body = new FormData();
-  body.append('file', selectedFile.value);
-  selectedFile.value = undefined; // Reset selected file
-  dropComponent.value.reset(); // Reset drop component
-  await ressourcesStore
-    .post(body)
-    .then(r => (fileLink.value = `${CDN}/${(r as Node).user_id}/${(r as Node).metadata?.transformed_path as string}`))
-    .catch(e => useNotifications().add({ type: 'error', title: 'Error', message: e }))
-    .finally(() => (isLoading.value = false));
+  fileLinks.value = [];
+  uploadProgress.value = { current: 0, total: selectedFiles.value.length };
+
+  const filesToUpload = [...selectedFiles.value];
+  selectedFiles.value = [];
+  dropComponent.value.reset();
+
+  for (const file of filesToUpload) {
+    const body = new FormData();
+    body.append('file', file);
+    try {
+      const r = await resourcesStore.post(body);
+      fileLinks.value.push(resourceURL(r));
+    } catch (e) {
+      useNotifications().add({ message: t('cdn.notifications.error', { error: e, file: file.name }), title: 'Error', type: 'error' });
+    }
+    uploadProgress.value.current++;
+  }
+
+  isLoading.value = false;
+  if (fileLinks.value.length) {
+    useNotifications().add({
+      message: t('cdn.notifications.successMsg', { n: fileLinks.value.length }),
+      title: t('cdn.notifications.successTitle'),
+      type: 'success',
+    });
+  }
 };
 
-const fileURL = (ressource: Node) => {
-  if ((ressource.metadata?.filetype as string)?.includes('image/')) return `${CDN}/${ressource.user_id}/${ressource.metadata?.transformed_path as string}`;
-  return '/file_placeholder.png';
-};
 const headers = [
-  { label: 'Name', key: 'name' },
-  { label: 'Size', key: 'size' },
-  { label: 'Type', key: 'type' },
-  { label: 'Parent doc', key: 'parent' },
-  { label: 'Date', key: 'date' },
-  { label: 'Action', key: 'action' },
+  { key: 'name', label: t('common.labels.name') },
+  { key: 'size', label: t('common.labels.size') },
+  { key: 'type', label: t('common.labels.type') },
+  { key: 'parent', label: t('common.labels.parent') },
+  { key: 'date', label: t('common.labels.date') },
+  { key: 'action', label: t('common.labels.action') },
 ];
 
 const color = (type: string) => (type.includes('image') ? 'green' : type.includes('video') ? 'blue' : type.includes('pdf') ? 'yellow' : 'red');
 const rows: ComputedRef<Field[]> = computed(() =>
-  sortedRessources.value.map(res => {
+  filteredResources.value.map(res => {
     const parent = res.parent_id ? nodesStore.getById(res.parent_id) : null;
     const category = parent ? nodesStore.getById(parent.parent_id || '') : null;
     return {
+      action: { data: res, type: 'slot' },
+      date: { content: numericDate(res.created_timestamp), type: 'text' },
       name: { content: res.name, type: 'text' },
+      parent: { content: category ? `<tag class="${appColors.getAppAccent(category.color)}">${parent?.name}</tag>` : '', type: 'html' },
       size: { content: readableFileSize(res.size ?? 0), type: 'text' },
-      type: { content: `<tag class="${color(res.metadata?.filetype as string)}">${res.metadata?.filetype as string}</tag>`, type: 'html' },
-      parent: { content: category ? `<tag class="${getAppColor(category.color)}">${parent?.name}</tag>` : '', type: 'html' },
-      date: { content: new Date(res.created_timestamp).toLocaleDateString(), type: 'text' },
-      action: { type: 'slot', data: res },
+      type: { content: `<tag class="${color(res.metadata?.filetype || '')}">${res.metadata?.filetype || ''}</tag>`, type: 'html' },
     };
   }),
 );
 
-const deleteRessource = async (id: string) => {
-  useModal().add(new Modal(shallowRef(DeleteRessourceModal), { props: { ressources: [id] }, size: 'small' }));
+const deleteResource = async (node: Node) => {
+  useModal().add(new Modal(shallowRef(DeleteNodeModal), { props: { node: node, redirectTo: '/dashboard/cdn' }, size: 'small' }));
 };
 const bulkDelete = async (lines: Field[]) => {
-  const ressourcesIds = lines.map(line => (line.action?.data as Node | undefined)?.id).filter((id): id is string => !!id);
-  useModal().add(new Modal(shallowRef(DeleteRessourceModal), { props: { ressources: ressourcesIds }, size: 'small' }));
+  const resources = lines.map(line => line.action?.data as Node);
+  useModal().add(new Modal(shallowRef(DeleteNodeModal), { props: { nodes: resources, redirectTo: '/dashboard/cdn' }, size: 'small' }));
 };
 </script>
 
 <style scoped lang="scss">
+.storage-indicator {
+  display: flex;
+  width: 100%;
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  gap: 12px;
+
+  .storage-info {
+    display: flex;
+    min-width: 180px;
+    flex-direction: column;
+    gap: 2px;
+
+    .storage-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .storage-values {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+
+  .progress-bar {
+    height: 8px;
+    border-radius: var(--radius-xs);
+    background: var(--surface-transparent);
+    flex: 1;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-xs);
+      background: var(--primary);
+      transition: width $transition-medium ease;
+
+      &.warning {
+        background: #f59e0b;
+      }
+
+      &.danger {
+        background: #ef4444;
+      }
+    }
+  }
+
+  .storage-percentage {
+    min-width: 50px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: right;
+  }
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+}
+
+.upload-progress {
+  display: flex;
+  font-size: 14px;
+  color: var(--text-secondary);
+  align-items: center;
+  gap: 10px;
+}
+
 .link-section {
   display: flex;
   width: 100%;
   margin: 6px 0;
   flex-direction: column;
   gap: 10px;
+
+  .links-text {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: $font-mono;
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .links-actions {
+    display: flex;
+    gap: 10px;
+  }
 }
 
 .bulk-actions {
@@ -142,48 +301,33 @@ const bulkDelete = async (lines: Field[]) => {
 }
 
 .action-btn {
-  width: 32px;
-  height: 32px;
-  padding: 6px;
-  border-radius: 50%;
-  transition: background-color 0.1s;
   cursor: pointer;
 
   &:hover {
-    background: var(--bg-ui);
+    background: var(--surface-transparent);
   }
 }
 
 .selected-count {
   display: flex;
   width: 32px;
-  height: 36px;
-  padding: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-family: Inter, sans-serif;
-  font-size: 13px;
+  height: 34px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
   font-weight: bold;
-  color: var(--font-color-light);
+  color: var(--text-secondary);
   align-items: center;
   justify-content: center;
 }
 
-.ressources-list {
+.resources-list {
   width: 100%;
-}
-
-.search {
-  width: 100%;
-  max-width: 450px;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 16px;
 }
 
 .not-found {
-  color: var(--font-color-light);
+  color: var(--text-secondary);
   text-align: center;
   grid-column: 1 / -1;
 }
@@ -193,37 +337,35 @@ const bulkDelete = async (lines: Field[]) => {
   padding: 16px 0;
   flex: 1;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .image-item {
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 
   &:hover {
     border-color: var(--primary);
-    box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+    box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
   }
 
   .image-preview {
     width: 100%;
     height: 150px;
-    border-radius: 6px;
-    background: var(--bg-color-secondary);
+    border-radius: var(--radius-sm);
     object-fit: cover;
   }
 
   .image-info {
     padding: 12px;
-    background: var(--bg-color-secondary);
 
     .image-name {
       display: block;
       font-size: 14px;
       font-weight: 500;
-      color: var(--font-color-dark);
+      color: var(--text-primary);
       margin-bottom: 4px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -233,7 +375,7 @@ const bulkDelete = async (lines: Field[]) => {
     .image-size {
       display: block;
       font-size: 12px;
-      color: var(--font-color-light);
+      color: var(--text-secondary);
     }
   }
 }

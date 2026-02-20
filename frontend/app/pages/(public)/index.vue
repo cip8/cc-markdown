@@ -26,18 +26,12 @@
       <img src="/screenshots/mock/0.png" class="hero-image" alt="App preview" />
     </section>
 
+    <BentoFeatures class="reveal" />
+    <FeaturesShowcase class="reveal" />
     <SelfHostSteps class="reveal" />
-
     <OpenSourceStats class="reveal" />
     <ContributorsMarquee class="reveal" />
-    <OSSPrinciples class="reveal" />
-
-    <FeaturesTimeline />
-
     <FeaturesFAQ class="reveal" />
-
-    <SponsorWall class="reveal" />
-
     <AppCTA class="reveal" />
 
     <AppFooter />
@@ -46,14 +40,25 @@
 
 <script setup lang="ts">
 import AppFooter from './_components/AppFooter.vue';
-import FeaturesTimeline from './_components/features/FeaturesTimeline.vue';
+import BentoFeatures from './_components/BentoFeatures.vue';
+import FeaturesShowcase from './_components/FeaturesShowcase.vue';
 import OpenSourceStats from './_components/OpenSourceStats.vue';
 import SelfHostSteps from './_components/SelfHostSteps.vue';
 import ContributorsMarquee from './_components/ContributorsMarquee.vue';
-import SponsorWall from './_components/SponsorWall.vue';
-import OSSPrinciples from './_components/OSSPrinciples.vue';
 import FeaturesFAQ from './_components/features/FeaturesFAQ.vue';
 import AppCTA from './_components/AppCTA.vue';
+
+definePageMeta({
+  ssr: true,
+  middleware: [
+    function redirectLandingDisabled() {
+      const config = useRuntimeConfig();
+      if (config.public.configDisableLandingPage) {
+        return navigateTo('/login');
+      }
+    },
+  ],
+});
 
 const heroEl = ref<HTMLElement | null>(null);
 
@@ -102,7 +107,6 @@ main {
   background: radial-gradient(1200px 400px at 20% -10%, rgb(255 255 255 / 8%), transparent), linear-gradient(120deg, var(--primary), #6c63ff);
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 4rem;
   overflow: hidden;
 }
 
@@ -113,7 +117,7 @@ main {
 .hero-image {
   width: 600px;
   border-radius: 1rem;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-xl);
   margin-top: 10px;
 }
 
@@ -167,11 +171,11 @@ main {
 }
 
 .btn.glow {
-  box-shadow: 0 10px 30px rgb(0 0 0 / 20%), 0 0 0 rgb(255 255 255 / 60%);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn.glow:hover {
-  box-shadow: 0 14px 36px rgb(0 0 0 / 24%), 0 0 30px rgb(255 255 255 / 35%);
+  box-shadow: var(--shadow-xl);
 }
 
 .hero-bg {
@@ -225,7 +229,9 @@ main {
 
 .reveal {
   opacity: 0;
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
   transform: translateY(24px);
 }
 

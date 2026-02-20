@@ -1,14 +1,11 @@
 <template>
   <button class="toggle" :class="{ active: modelValue || active }" :aria-pressed="modelValue" role="switch" @click="toggle">
-    <span class="circle" />
+    <span class="knob" />
   </button>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  modelValue?: boolean;
-  active?: boolean;
-}>();
+const props = defineProps<{ modelValue?: boolean; active?: boolean }>();
 const active = ref(props.active || props.modelValue || false);
 
 const emit = defineEmits<{
@@ -26,23 +23,28 @@ const toggle = () => {
 <style scoped lang="scss">
 .toggle {
   display: flex;
-  width: 44px;
   height: 24px;
   padding: 2px;
-  border: 1px solid var(--border-color, #ccc);
+  border: 1px solid var(--border);
   border-radius: 15px;
-  background: var(--bg-contrast-2);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  background: var(--surface-overlay);
+  transition:
+    background-color $transition-medium,
+    border-color $transition-medium;
   align-items: center;
   cursor: pointer;
+  flex: 0 0 44px;
 
-  .circle {
+  .knob {
     width: 20px;
     height: 20px;
     border: 1px solid transparent;
     border-radius: 50%;
-    background: var(--bg-color);
-    transition: transform 0.25s ease, background-color 0.25s, border-color 0.25s;
+    background: var(--surface-base);
+    transition:
+      transform $transition-base,
+      background-color $transition-base,
+      border-color $transition-base;
     transform: translateX(0);
   }
 
@@ -50,9 +52,9 @@ const toggle = () => {
     border-color: var(--primary);
     background: var(--primary);
 
-    .circle {
+    .knob {
       border-color: var(--primary);
-      background: #fff; // cercle toujours blanc
+      background: #fff;
       transform: translateX(20px);
     }
   }

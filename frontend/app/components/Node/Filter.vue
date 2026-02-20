@@ -2,14 +2,15 @@
   <div ref="root" class="filter-component">
     <div class="btn-icon" @click="toggle" @keydown.enter.prevent="toggle">
       <Icon name="filter" display="lg" />
+      <p class="hint-tooltip">{{ t('nodes.filter.title') }}</p>
       <span v-if="filtered.length != nodes?.length" class="bubble"></span>
     </div>
 
     <Transition name="pop">
-      <div v-if="opened" class="filter-panel" role="dialog" aria-label="Filter nodes" @keydown.esc.prevent="close">
+      <div v-if="opened" class="filter-panel" role="dialog" :aria-label="t('nodes.filter.title')" @keydown.esc.prevent="close">
         <!-- Search -->
         <div>
-          <label>Search</label>
+          <label>{{ t('common.actions.search') }}</label>
           <input ref="inputRef" v-model="options.query" />
         </div>
 
@@ -17,31 +18,32 @@
         <div class="row">
           <label class="row">
             <input v-model="options.sortType" type="radio" value="ascending" />
-            <span>Ascending</span>
+            <span>{{ t('components.filter.ascending') }}</span>
           </label>
           <label class="row">
             <input v-model="options.sortType" type="radio" value="descending" />
-            <span>Descending</span>
+            <span>{{ t('components.filter.descending') }}</span>
           </label>
         </div>
         <div class="row">
           <div style="flex: 1">
-            <label>Sort</label>
+            <label>{{ t('components.filter.sort') }}</label>
             <AppSelect v-model="options.sortBy" :items="SORT_OPTIONS" />
           </div>
 
           <div>
-            <label>Match</label>
+            <label>{{ t('components.filter.match') }}</label>
             <AppSelect v-model="options.matchMode" :items="MATCH_OPTIONS" size="125px" class="select" />
           </div>
         </div>
 
         <div class="panel-actions">
-          <button class="btn" type="button" @click="reset">Reset</button>
+          <button class="btn" type="button" @click="reset">{{ t('common.actions.reset') }}</button>
         </div>
 
         <div class="panel-footer">
-          <small>{{ filtered.length }} / {{ nodes?.length }} nodes match</small> <small>• <kbd>esc</kbd> to close</small>
+          <small>{{ t('nodes.filter.footer', { count: filtered.length, total: props.nodes.length }) }}</small>
+          <small>• <kbd>esc</kbd> {{ t('nodes.filter.toClose') }}</small>
         </div>
       </div>
     </Transition>
@@ -49,17 +51,19 @@
 </template>
 
 <script setup lang="ts">
-import { useNodesStore } from '~/stores';
 import type { Node, SearchOptions } from '~/stores';
 
 const props = defineProps<{ nodes: Node[] }>();
+const emit = defineEmits<{ (e: 'update:nodes', v: Node[]): void }>();
 
 const defaultOptions: SearchOptions = {
   query: '',
-  sortType: 'ascending',
+  sortType: 'descending',
   sortBy: 'created',
   matchMode: 'includes',
 };
+
+const { t } = useI18nT();
 const store = useNodesStore();
 const options = ref({ ...defaultOptions });
 const opened = ref<boolean>(false);
@@ -67,27 +71,25 @@ const inputRef = ref<HTMLInputElement | null>(null);
 const root = ref<HTMLDivElement | null>(null);
 
 const SORT_OPTIONS = [
-  { id: 'created', label: 'Created' },
-  { id: 'modified', label: 'Modified' },
-  { id: 'name', label: 'Name' },
+  { id: 'created', label: t('components.filter.created') },
+  { id: 'modified', label: t('components.filter.modified') },
+  { id: 'name', label: t('common.labels.name') },
 ];
 
 const MATCH_OPTIONS = [
-  { id: 'includes', label: 'Contains' },
-  { id: 'starts', label: 'Starts with' },
-  { id: 'exact', label: 'Exact' },
+  { id: 'includes', label: t('components.filter.contains') },
+  { id: 'starts', label: t('components.filter.startsWith') },
+  { id: 'exact', label: t('components.filter.exact') },
 ];
-
-const emit = defineEmits<{ (e: 'update:nodes', v: Node[]): void }>();
 
 let outsideHandler: ((e: MouseEvent) => void) | null = null;
 
 const filtered = computed(() => store.search(options.value, props.nodes));
 
-function toggle() {
+const toggle = () => {
   opened.value = !opened.value;
   if (opened.value) focusInput();
-}
+};
 const close = () => (opened.value = false);
 const reset = () => (options.value = { ...defaultOptions });
 const focusInput = () => nextTick(() => inputRef.value?.focus());
@@ -114,83 +116,107 @@ onBeforeUnmount(() => {
   position: relative;
   display: inline-block;
 }
+
+.btn-icon {
+  position: relative;
+
+  &:hover > .hint-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
 .bubble {
   position: absolute;
   top: 2px;
   right: 2px;
   width: 10px;
   height: 10px;
-  background: var(--primary-bg);
   border: 3px solid var(--primary);
   border-radius: 50%;
+  background: var(--primary-bg);
 }
 
 .filter-panel {
   position: absolute;
-  right: 0;
   top: 48px;
-  width: 320px;
-  background: var(--bg-color);
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.2);
-  border: 1px solid var(--border-color);
+  right: 0;
   z-index: 200;
+  width: 320px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-lg);
 }
 
 .row {
   display: flex;
-  justify-content: space-around;
-  gap: 8px;
   margin: 4px 0;
+  gap: 8px;
+  justify-content: space-around;
 }
+
+kbd {
+  padding: 2px 4px;
+}
+
 label {
   font-size: 13px;
   margin-bottom: 6px;
 }
+
 .panel-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 6px;
 }
+
 .btn {
   padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
 }
+
 .btn.primary {
-  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-600) 100%);
-  color: white;
   border: none;
+  color: white;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-600) 100%);
 }
 
 .panel-footer {
-  margin-top: 8px;
   color: var(--muted);
+  margin-top: 8px;
 }
 
 /* small pop animation */
 .pop-enter-active,
 .pop-leave-active {
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform $transition-fast ease,
+    opacity $transition-fast ease;
 }
+
 .pop-enter-from {
-  transform: scale(0.98);
   opacity: 0;
+  transform: scale(0.98);
 }
+
 .pop-enter-to {
-  transform: scale(1);
   opacity: 1;
+  transform: scale(1);
 }
+
 .pop-leave-from {
-  transform: scale(1);
   opacity: 1;
+  transform: scale(1);
 }
+
 .pop-leave-to {
-  transform: scale(0.98);
   opacity: 0;
+  transform: scale(0.98);
 }
 </style>

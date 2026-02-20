@@ -1,10 +1,12 @@
 <template>
-  <NodeList :parent="parent" :nodes="nodes" />
+  <NodeContainerView :parent="parent" :nodes="nodes" />
 </template>
 
 <script setup lang="ts">
-import NodeList from '~/components/Node/NodeList.vue';
+import type { RouteLocationNormalizedLoaded } from 'vue-router';
 import type { Node } from '~/stores';
+
+definePageMeta({ breadcrumb: (route: RouteLocationNormalizedLoaded) => useNodesStore().getById(route.params.id as string)?.name || '' });
 
 const route = useRoute();
 const nodesStore = useNodesStore();
@@ -12,9 +14,7 @@ const nodesStore = useNodesStore();
 const parentId = route.params.id as string;
 const parent = ref<Node | undefined>();
 
-definePageMeta({ breadcrumb: () => useNodesStore().getById(useRoute().params.id as string)?.name || '' });
-
-watchEffect(async () => {
+watchEffect(() => {
   parent.value = nodesStore.getById(parentId);
 });
 

@@ -1,17 +1,31 @@
-// @ts-check
-import withNuxt, { defineFlatConfigs } from './.nuxt/eslint.config.mjs';
 import prettier from 'eslint-config-prettier';
 
+// @ts-check
+import withNuxt from './.nuxt/eslint.config.mjs';
+
 export default withNuxt(
-  defineFlatConfigs(
-    {
-      ignores: ['app/styles/katex/**'],
+  prettier,
+  {
+    ignores: ['app/styles/vendors/katex/**'],
+  },
+
+  {
+    plugins: {},
+
+    rules: {
+      // 'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-duplicate-imports': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'vue/block-lang': [
+        'error',
+        {
+          script: { lang: 'ts' },
+        },
+      ],
+      'vue/component-name-in-template-casing': ['error', 'PascalCase'],
+      'vue/multi-word-component-names': 'off',
+      'vue/no-unused-properties': 'error',
     },
-    {
-      rules: {
-        'vue/multi-word-component-names': 'off',
-      },
-    },
-    prettier,
-  ),
+  },
 );

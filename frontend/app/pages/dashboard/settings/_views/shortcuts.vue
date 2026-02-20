@@ -1,126 +1,145 @@
 <template>
   <div>
-    <h2 class="ctitle">Shortcuts</h2>
-    <p class="csubtitle">Here you can see the shortcuts for the different pages of the dashboard.</p>
-    <p>General</p>
+    <h2 class="page-title">Shortcuts</h2>
+    <p class="page-subtitle">Here you can see the shortcuts for the different pages of the dashboard.</p>
+    <p>{{ t('application.shortcuts.sections.general') }}</p>
     <div class="shortcuts">
       <div class="shortcut">
-        <span>Open quick search</span>
-        <span><kbd>Ctrl</kbd> <kbd>Q</kbd></span>
-      </div>
-      <div class="shortcut">
-        <span>Open command center and navigate</span>
+        <span>{{ t('application.shortcuts.openCmdCenter') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>K</kbd> or <kbd>/</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Open CDN uploader</span>
+        <span>{{ t('application.shortcuts.openCDN') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>U</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Create a new document</span>
+        <span>{{ t('application.shortcuts.createDocument') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>C</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Create a new category</span>
+        <span>{{ t('application.shortcuts.createCategory') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>N</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Reload the page</span>
+        <span>{{ t('application.shortcuts.reloadPage') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>R</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Save the current page</span>
+        <span>{{ t('application.shortcuts.savePage') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>S</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Print the page</span>
+        <span>{{ t('application.shortcuts.printPage') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>P</kbd></span>
       </div>
+      <div class="shortcut">
+        <span>{{ t('application.shortcuts.closeModal') }}</span>
+        <span><kbd>Esc</kbd></span>
+      </div>
     </div>
-    <p>Document page</p>
+    <p>{{ t('application.shortcuts.sections.document') }}</p>
     <div class="shortcuts">
       <div class="shortcut">
-        <span>Edit the document</span>
+        <span>{{ t('application.shortcuts.editDocument') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>E</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Go to next document</span>
+        <span>{{ t('application.shortcuts.nextDocument') }}</span>
         <span><kbd>ArrowRight</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Go to previous document</span>
+        <span>{{ t('application.shortcuts.prevDocument') }}</span>
         <span><kbd>ArrowLeft</kbd></span>
       </div>
     </div>
-    <p>Editor page</p>
+    <p>{{ t('application.shortcuts.sections.editor') }}</p>
     <div class="shortcuts">
       <div class="shortcut">
-        <span>Save the document</span>
+        <span>{{ t('application.shortcuts.savePage') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>S</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Toggle preview</span>
+        <span>{{ t('application.shortcuts.togglePreview') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>P</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Exit the page</span>
+        <span>{{ t('application.shortcuts.exitPage') }}</span>
         <span><kbd>Esc</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Undo the last action</span>
+        <span>{{ t('application.shortcuts.openFindDialog') }}</span>
+        <span><kbd>Ctrl</kbd> <kbd>F</kbd></span>
+      </div>
+      <div class="shortcut">
+        <span>{{ t('application.shortcuts.undoAction') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>Z</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Redo the last action</span>
+        <span>{{ t('application.shortcuts.redoAction') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>Y</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Bold text</span>
+        <span>{{ t('application.shortcuts.copyText') }}</span>
+        <span><kbd>Ctrl</kbd> <kbd>C</kbd></span>
+      </div>
+      <div class="shortcut">
+        <span>{{ t('application.shortcuts.cutText') }}</span>
+        <span><kbd>Ctrl</kbd> <kbd>X</kbd></span>
+      </div>
+      <div class="shortcut">
+        <span>{{ t('application.shortcuts.pasteText') }}</span>
+        <span><kbd>Ctrl</kbd> <kbd>V</kbd></span>
+      </div>
+      <div class="shortcut">
+        <span>{{ t('application.shortcuts.boldText') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>B</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Italic text</span>
+        <span>{{ t('application.shortcuts.italicText') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>I</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Underline text</span>
+        <span>{{ t('application.shortcuts.underlineText') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>U</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Insert link</span>
+        <span>{{ t('application.shortcuts.insertLink') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>L</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Insert image</span>
+        <span>{{ t('application.shortcuts.insertImage') }}</span>
         <span><kbd>Ctrl</kbd> <kbd>E</kbd></span>
       </div>
     </div>
-    <p>Search page</p>
+    <p>{{ t('application.shortcuts.sections.search') }}</p>
     <div class="shortcuts">
       <div class="shortcut">
-        <span>Next search result</span>
+        <span>{{ t('application.shortcuts.nextSearchResult') }}</span>
         <span><kbd>Tab</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Previous search result</span>
+        <span>{{ t('application.shortcuts.prevSearchResult') }}</span>
         <span><kbd>Shift</kbd> <kbd>Tab</kbd></span>
       </div>
       <div class="shortcut">
-        <span>Open the selected search result</span>
+        <span>{{ t('application.shortcuts.openSelectedSearchResult') }}</span>
         <span><kbd>Enter</kbd></span>
       </div>
     </div>
   </div>
 </template>
 
+<script lang="ts" setup>
+const { t } = useI18nT();
+</script>
+
 <style scoped lang="scss">
 .shortcuts {
   display: flex;
-  border-radius: 12px;
-  font-family: Inter;
+  border-radius: var(--radius-lg);
   font-size: 16px;
   font-weight: 400;
-  background-color: var(--bg-ui);
+  background-color: var(--surface-transparent);
   flex-direction: column;
   gap: 8px;
   text-size-adjust: 100%;
@@ -133,26 +152,14 @@ p {
 .shortcut {
   display: flex;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   text-align: left;
   align-items: center;
   gap: 1rem;
   justify-content: space-between;
 
   &:hover {
-    background-color: var(--bg-ui);
+    background-color: var(--surface-transparent);
   }
-}
-
-kbd {
-  display: inline-block;
-  padding: 4px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-family: Inter;
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--font-color-dark);
-  background-color: var(--bg-color);
 }
 </style>

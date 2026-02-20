@@ -1,7 +1,8 @@
 <template>
-  <div class="dropdown-container" @click="toggleDropdown">
+  <div class="dropdown-container" @click.stop="toggleDropdown">
+    <!-- stop propagation to avoid closing sidebar on mobile -->
     <div class="dropdown-selected" :class="{ open: isOpen }">
-      <span v-if="selectedOption" style="flex: 1"><SidebarWorkspace :option="selectedOption" /></span>
+      <span v-if="selectedOption" class="selected"><SidebarWorkspace :option="selectedOption" /></span>
       <Icon name="expand" display="sm" />
     </div>
     <ul v-if="isOpen" class="dropdown-options">
@@ -11,30 +12,31 @@
       <li :class="{ selected: shared_workspaces.value === workspaceId }" @click="selectOption(shared_workspaces)">
         <SidebarWorkspace :option="shared_workspaces" />
       </li>
-      <hr style="margin: 2px 0" />
-      <span style="margin: 4px 6px; font-size: small; font-weight: 600; color: var(--font-color-light)">Workspaces</span>
+      <hr />
+      <span class="workspaces-label">{{ t('components.sidebar.workspaces') }}</span>
       <li v-for="option in options" :key="option.meta?.id" :class="{ selected: option.value === workspaceId }" @click="selectOption(option)">
         <SidebarWorkspace :option="option" />
       </li>
-      <div v-if="!options.length" class="placeholder" style="padding: 6px; font-size: 0.9rem; font-style: italic">No workspaces found</div>
+      <div v-if="!options.length" class="placeholder">{{ t('components.sidebar.noWorkspaces') }}</div>
       <hr />
-      <div class="new-workspace" @click="create_workspace"><Icon name="plus" fill="var(--font-color-light)" /> New Workspace</div>
+      <div class="new-workspace" @click="create_workspace"><Icon name="plus" fill="var(--text-secondary)" /> {{ t('components.sidebar.newWorkspace') }}</div>
       <NuxtLink :to="`/dashboard/categories/${selectedOption.value}/edit`" class="new-workspace"
-        ><Icon name="settings" fill="var(--font-color-light)" /> Edit Workspace</NuxtLink
+        ><Icon name="settings" fill="var(--text-secondary)" /> {{ t('components.sidebar.editWorkspace') }}</NuxtLink
       >
     </ul>
   </div>
 </template>
 <script setup lang="ts">
 import SidebarWorkspace from './SidebarWorkspace.vue';
-import NewCategoryModal from '~/pages/dashboard/categories/_modals/CreateCategoryModal.vue';
+import NewCategoryModal from '~/components/Node/Modals/CreateCategory.vue';
 
 import type { Workspace } from './helpers';
 
+const { t } = useI18nT();
 const { workspaceId } = useSidebar();
 const props = defineProps<{ options: Workspace[] }>();
-const all_workspaces = ref({ text: 'All Workspaces', value: undefined, meta: { color: -1 } });
-const shared_workspaces = ref({ text: 'Shared with me', value: 'shared', meta: { color: -1, icon: 'users' } });
+const all_workspaces = computed(() => ({ text: t('components.sidebar.allWorkspaces'), value: undefined, meta: { color: -1 } }));
+const shared_workspaces = computed(() => ({ text: t('components.sidebar.sharedWithMe'), value: 'shared', meta: { color: -1, icon: 'users' } }));
 watch(
   () => props.options,
   opts => {
@@ -72,62 +74,134 @@ const create_workspace = (_: MouseEvent) => useModal().add(new Modal(shallowRef(
 .dropdown-selected {
   display: flex;
   margin: 4px 0;
-  padding: 2px 10px 2px 4px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  transition:
+    border-color $transition-base ease,
+    box-shadow $transition-base ease;
   align-items: center;
   cursor: pointer;
   justify-content: space-between;
+
+  &:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+  }
+
+  svg {
+    transition: transform $transition-base ease;
+  }
+}
+
+.selected {
+  flex: 1;
 }
 
 .placeholder {
-  color: var(--font-color-light);
+  padding: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .dropdown-selected.open {
-  border-color: var(--selection-color);
-  box-shadow: 0 2px 10px var(--shadow);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+
+  svg {
+    transform: rotate(180deg);
+  }
 }
 
 .dropdown-options {
   position: absolute;
   z-index: 100;
-  width: 98%;
+  width: 100%;
   margin: 0;
-  padding: 2px 0;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--font-color);
-  background-color: var(--bg-color);
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  background-color: var(--surface-base);
+  box-shadow: var(--shadow-lg);
+  animation: slideDown 0.15s ease-out;
   list-style: none;
   overflow-y: auto;
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 li {
-  margin: 1px 4px;
-  padding: 4px;
-  border-radius: 4px;
+  margin: 4px 0;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
   cursor: pointer;
 }
 
-li.selected,
-li:hover {
-  background-color: var(--selection-color);
+li.selected {
+  font-weight: 500;
+  background: var(--accent-bg);
+}
+
+li:hover:not(.selected) {
+  background-color: var(--surface-overlay);
+}
+
+li:active {
+  transform: scale(0.98);
+}
+
+hr {
+  margin: 6px 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.workspaces-label {
+  display: block;
+  margin: 4px 6px;
+  font-size: small;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .new-workspace {
   display: flex;
-  margin: 4px;
-  padding: 4px;
-  border-radius: 6px;
+  margin: 2px 0;
+  padding: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
+  color: var(--text-secondary);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
   align-items: center;
   cursor: pointer;
-  gap: 4px;
+  gap: 6px;
 
   &:hover {
-    background-color: var(--selection-color);
+    color: var(--text-body);
+    background-color: var(--surface-overlay);
+
+    svg {
+      fill: var(--accent) !important;
+    }
   }
 }
 </style>

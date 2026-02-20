@@ -1,8 +1,8 @@
 <template>
-  <nav class="breadcrumb">
+  <nav class="no-mobile" aria-label="Breadcrumb">
     <svg
-      v-if="preferences.get('navbarItems').value.navigation"
-      :class="{ disabled: !canGoBack }"
+      v-if="hasNavigation.navigation"
+      :class="{ disabled: !canGoBack, 'no-tablet': true }"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 -960 960 960"
       @click="goBack"
@@ -11,8 +11,8 @@
     </svg>
 
     <svg
-      v-if="preferences.get('navbarItems').value.navigation"
-      :class="{ disabled: !canGoForward }"
+      v-if="hasNavigation.navigation"
+      :class="{ disabled: !canGoForward, 'no-tablet': true }"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 -960 960 960"
       @click="goForward"
@@ -20,8 +20,8 @@
       <path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" />
     </svg>
 
-    <ol class="breadcrumb-list">
-      <li v-for="(segment, index) in breadcrumbs" :key="index" class="breadcrumb-item">
+    <ol class="list">
+      <li v-for="(segment, index) in breadcrumbs" :key="index" class="item">
         <NuxtLink :to="segment.path"> {{ segment.name }} </NuxtLink>
       </li>
     </ol>
@@ -29,48 +29,67 @@
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationNormalizedLoaded } from 'vue-router';
+
+const { t } = useI18nT();
 const route = useRoute();
 const router = useRouter();
-const preferences = usePreferences();
+const preferences = usePreferencesStore();
 
 const breadcrumbs = ref<Array<{ name: string; path: string }>>([]);
 
 const canGoBack = ref(false);
 const canGoForward = ref(false);
+const hasNavigation = preferences.get('navbarItems');
 
 // Renamed for clarity
 const goBack = () => router.go(-1);
 const goForward = () => router.go(1);
 
+interface I18nBreadcrumb {
+  c?: number; // Optional count for pluralization
+  i18n: I18nKey;
+}
+
 declare module 'vue-router' {
   interface RouteMeta {
-    breadcrumb?: string | (() => string);
+    breadcrumb?: ((route: RouteLocationNormalizedLoaded) => string) | I18nBreadcrumb | string;
   }
 }
 
 watchEffect(() => {
   canGoBack.value = window.history.state?.back !== null;
   canGoForward.value = window.history.state?.forward !== null;
+
   breadcrumbs.value = [];
+
   route.matched.forEach(match => {
-    if (!match.meta?.breadcrumb) return;
+    const meta = match.meta?.breadcrumb;
+    if (!meta) return;
 
     let name = '';
-    if (typeof match.meta.breadcrumb === 'function') name = match.meta.breadcrumb();
-    else if (typeof match.meta.breadcrumb === 'string') name = match.meta.breadcrumb;
+
+    if (typeof meta === 'function') {
+      name = meta(route);
+    } else if (typeof meta === 'object' && (meta as I18nBreadcrumb)?.i18n) {
+      const { c, i18n } = meta as I18nBreadcrumb;
+      name = t(i18n, { count: c });
+    } else {
+      name = meta as string;
+    }
 
     if (!name) return;
-    const r = router.resolve(match);
+
     breadcrumbs.value.push({
       name,
-      path: r.path,
+      path: router.resolve(match).path,
     });
   });
 });
 </script>
 
 <style lang="scss" scoped>
-.breadcrumb {
+nav {
   display: flex;
   padding: 3px;
   align-items: center;
@@ -81,9 +100,11 @@ watchEffect(() => {
     width: 27px;
     height: 27px;
     border-radius: 50%;
-    transition: all 0.3s ease;
+    transition:
+      background-color $transition-medium ease,
+      opacity $transition-medium ease;
     cursor: pointer;
-    fill: var(--font-color);
+    fill: var(--text-body);
     margin-right: 8px;
 
     &:hover:not(.disabled) {
@@ -98,7 +119,7 @@ watchEffect(() => {
   }
 }
 
-.breadcrumb-list {
+.list {
   display: flex;
   margin: 0;
   padding: 0;
@@ -106,22 +127,22 @@ watchEffect(() => {
   list-style: none;
 }
 
-.breadcrumb-item {
+.item {
   display: inline-flex;
   align-items: center;
 
   a {
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     font-size: 14px;
     font-weight: 500;
-    color: var(--font-color);
+    color: var(--text-body);
     text-decoration: none;
   }
 
   &:not(:last-child)::after {
     margin: 0 8px;
-    color: var(--font-color-light);
+    color: var(--text-secondary);
     content: '/';
   }
 }
